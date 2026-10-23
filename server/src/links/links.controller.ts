@@ -12,12 +12,12 @@ export class LinksController {
   }
 
   @Get()
-  getLinks() {
+  findAll() {
     return this.linksService.findAll();
   }
 
   @Get(':code')
-  findByCode(@Param('code') code: string) {
+  findOne(@Param('code') code: string) {
     return this.linksService.findByCode(code);
   }
 }

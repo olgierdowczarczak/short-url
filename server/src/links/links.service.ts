@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Link } from './links.interface.js';
 import { randomBytes } from 'node:crypto';
 
@@ -20,8 +20,12 @@ export class LinksService {
     return Array.from(this.links.values());
   }
 
-  findByCode(code: string): Link | undefined {
-    return this.links.get(code);
+  findByCode(code: string): Link {
+    const link = this.links.get(code);
+    if (!link) {
+      throw new NotFoundException(`Link with code ${code} not found`);
+    }
+    return link;
   }
 
   // update
