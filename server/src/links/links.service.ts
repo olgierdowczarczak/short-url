@@ -1,34 +1,51 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Link } from './links.interface.js';
 import { randomBytes } from 'node:crypto';
+import { Repository, QueryFailedError } from 'typeorm';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Link } from './link.entity.js';
 
 @Injectable()
 export class LinksService {
-  private links: Map<string, Link> = new Map();
+  constructor(
+    @InjectRepository(Link)
+    private readonly linksRepository: Repository<Link>,
+  ) {}
 
-  create(url: string): Link {
-    const newLink: Link = {
-      code: randomBytes(6).toString('base64url'),
-      url: url,
-      createdAt: new Date(),
-    };
-    this.links.set(newLink.code, newLink);
-    return newLink;
+  async create(url: string): Promise<Link> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const link = this.linksRepository.create({
+        code: randomBytes(6).toString('base64url'),
+        url,
+      });
+
+      try {
+        return await this.linksRepository.save(link);
+      } catch (error) {
+        if (
+          error instanceof QueryFailedError &&
+          error.driverError.code === '23505'
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new InternalServerErrorException('Failed to create link');
   }
 
-  findAll(): Link[] {
-    return Array.from(this.links.values());
+  async findAll(): Promise<Link[]> {
+    return this.linksRepository.find();
   }
 
-  findByCode(code: string): Link {
-    const link = this.links.get(code);
+  async findByCode(code: string): Promise<Link> {
+    const link = await this.linksRepository.findOneBy({ code });
     if (!link) {
       throw new NotFoundException(`Link with code ${code} not found`);
     }
     return link;
   }
-
-  // update
-
-  // delete
 }
