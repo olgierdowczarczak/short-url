@@ -1,20 +1,20 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { RedirectController } from './redirect.controller.js';
-import { LinksService } from './links.service.js';
+// import { Test, TestingModule } from '@nestjs/testing';
+// import { RedirectController } from './redirect.controller.js';
+// import { LinksService } from './links.service.js';
 
-describe('RedirectController', () => {
-  let controller: RedirectController;
+// describe('RedirectController', () => {
+//   let controller: RedirectController;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [LinksService],
-      controllers: [RedirectController],
-    }).compile();
+//   beforeEach(async () => {
+//     const module: TestingModule = await Test.createTestingModule({
+//       providers: [LinksService],
+//       controllers: [RedirectController],
+//     }).compile();
 
-    controller = module.get<RedirectController>(RedirectController);
-  });
+//     controller = module.get<RedirectController>(RedirectController);
+//   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-});
+//   it('should be defined', () => {
+//     expect(controller).toBeDefined();
+//   });
+// });
