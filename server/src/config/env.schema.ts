@@ -13,3 +13,5 @@ export const envSchema = z.object({
   DB_NAME: z.string().nonempty(),
   DB_PORT: port,
 });
+
+export type Env = z.infer<typeof envSchema>;
