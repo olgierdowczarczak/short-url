@@ -2,8 +2,9 @@ import { Module, ValidationPipe } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { LinksModule } from './links/links.module.js';
 import { type Env, envSchema } from './config/env.schema.js';
+import { buildTypeOrmOptions } from './config/typeorm.config.js';
+import { LinksModule } from './links/links.module.js';
 
 @Module({
   imports: [
@@ -14,14 +15,14 @@ import { type Env, envSchema } from './config/env.schema.js';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService<Env, true>) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST', { infer: true }),
-        port: configService.get('DB_PORT', { infer: true }),
-        username: configService.get('DB_USERNAME', { infer: true }),
-        password: configService.get('DB_PASSWORD', { infer: true }),
-        database: configService.get('DB_NAME', { infer: true }),
+        ...buildTypeOrmOptions({
+          DB_HOST: configService.get('DB_HOST', { infer: true }),
+          DB_PORT: configService.get('DB_PORT', { infer: true }),
+          DB_USERNAME: configService.get('DB_USERNAME', { infer: true }),
+          DB_PASSWORD: configService.get('DB_PASSWORD', { infer: true }),
+          DB_NAME: configService.get('DB_NAME', { infer: true }),
+        }),
         autoLoadEntities: true,
-        synchronize: true,
       }),
     }),
     LinksModule,
