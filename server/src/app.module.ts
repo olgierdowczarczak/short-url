@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { type Env, envSchema } from './config/env.schema.js';
 import { buildTypeOrmOptions } from './config/typeorm.config.js';
+import { getEnvFilePaths } from './config/env-files.js';
 import { LinksModule } from './links/links.module.js';
 
 @Module({
@@ -11,6 +12,7 @@ import { LinksModule } from './links/links.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
       validationSchema: envSchema,
+      envFilePath: getEnvFilePaths(),
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
