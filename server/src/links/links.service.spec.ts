@@ -121,7 +121,9 @@ describe('LinksService', () => {
       const result = await service.findAll();
 
       expect(result).toBe(links);
-      expect(linksRepository.find).toHaveBeenCalledOnce();
+      expect(linksRepository.find).toHaveBeenCalledExactlyOnceWith({
+        order: { createdAt: 'DESC' },
+      });
     });
 
     it('should return empty list when there are no links', async () => {

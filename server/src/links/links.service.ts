@@ -38,7 +38,7 @@ export class LinksService {
   }
 
   async findAll(): Promise<Link[]> {
-    return this.linksRepository.find();
+    return this.linksRepository.find({ order: { createdAt: 'DESC' } });
   }
 
   async findByCode(code: string): Promise<Link> {
