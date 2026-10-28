@@ -121,4 +121,55 @@ describe('Links (e2e)', () => {
       expect(await linksRepository.count()).toBe(0);
     });
   });
+
+  describe(`GET ${modulePath}/:code`, () => {
+    it('should return link when link with provided code exists', async () => {
+      const existingLink = buildLink();
+      await linksRepository.insert(existingLink);
+
+      const response = await request(app.getHttpServer()).get(
+        `${modulePath}/${existingLink.code}`,
+      );
+
+      expect(response.statusCode).toBe(HttpStatus.OK);
+      expect(response.body).toMatchObject({
+        code: existingLink.code,
+        url: existingLink.url,
+      });
+    });
+
+    it('should return 404 when link with provided code does not exist', async () => {
+      const code = 'qwertyop';
+
+      const response = await request(app.getHttpServer()).get(
+        `${modulePath}/${code}`,
+      );
+
+      expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
+      expect(response.body.message).toBe(`Link with code ${code} not found`);
+    });
+  });
+
+  describe('GET /:code', () => {
+    it('should redirect to the original url when link exists', async () => {
+      const existingLink = buildLink();
+      await linksRepository.insert(existingLink);
+
+      const response = await request(app.getHttpServer()).get(
+        `/${existingLink.code}`,
+      );
+
+      expect(response.statusCode).toBe(HttpStatus.FOUND);
+      expect(response.headers.location).toBe(existingLink.url);
+    });
+
+    it('should return 404 when link with provided code does not exist', async () => {
+      const code = 'qwertyop';
+
+      const response = await request(app.getHttpServer()).get(`/${code}`);
+
+      expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
+      expect(response.body.message).toBe(`Link with code ${code} not found`);
+    });
+  });
 });
