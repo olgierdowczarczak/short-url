@@ -6,6 +6,7 @@ services:
       context: ../server
     environment:
       PORT: 3000
+      API_KEY: ${API_KEY}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USERNAME: ${POSTGRES_USER}

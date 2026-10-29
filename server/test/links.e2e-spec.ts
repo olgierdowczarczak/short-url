@@ -1,18 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { Repository } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { Link } from '../src/links/link.entity.js';
 import { buildLink } from '../src/links/testing/link.fixtures.js';
+import type { Env } from '../src/config/env.schema.js';
 
 const CODE_PATTERN = /^[A-Za-z0-9_-]{8}$/;
 
 describe('Links (e2e)', () => {
   let app: INestApplication<App>;
   let linksRepository: Repository<Link>;
+  let apiKey: string;
 
   const modulePath = '/links';
 
@@ -25,6 +28,9 @@ describe('Links (e2e)', () => {
     await app.init();
 
     linksRepository = app.get(getRepositoryToken(Link));
+    apiKey = app
+      .get<ConfigService<Env, true>>(ConfigService)
+      .get('API_KEY', { infer: true });
   });
 
   beforeEach(async () => {
@@ -37,7 +43,9 @@ describe('Links (e2e)', () => {
 
   describe(`GET ${modulePath}`, () => {
     it('should return an empty list when there are no links', async () => {
-      const response = await request(app.getHttpServer()).get(modulePath);
+      const response = await request(app.getHttpServer())
+        .get(modulePath)
+        .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toEqual([]);
@@ -56,7 +64,9 @@ describe('Links (e2e)', () => {
       });
       await linksRepository.insert([olderLink, newerLink]);
 
-      const response = await request(app.getHttpServer()).get(modulePath);
+      const response = await request(app.getHttpServer())
+        .get(modulePath)
+        .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toHaveLength(2);
@@ -77,7 +87,8 @@ describe('Links (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post(modulePath)
-        .send({ url });
+        .send({ url })
+        .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.CREATED);
       expect(response.body).toMatchObject({
@@ -96,7 +107,8 @@ describe('Links (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .post(modulePath)
-        .send({ url: existingLink.url });
+        .send({ url: existingLink.url })
+        .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.CREATED);
       expect(response.body.code).toMatch(CODE_PATTERN);
@@ -115,7 +127,8 @@ describe('Links (e2e)', () => {
     ])('should return 400 when %s', async (_, payload) => {
       const response = await request(app.getHttpServer())
         .post(modulePath)
-        .send(payload);
+        .send(payload)
+        .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
       expect(await linksRepository.count()).toBe(0);
@@ -127,9 +140,9 @@ describe('Links (e2e)', () => {
       const existingLink = buildLink();
       await linksRepository.insert(existingLink);
 
-      const response = await request(app.getHttpServer()).get(
-        `${modulePath}/${existingLink.code}`,
-      );
+      const response = await request(app.getHttpServer())
+        .get(`${modulePath}/${existingLink.code}`)
+        .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toMatchObject({
@@ -141,13 +154,44 @@ describe('Links (e2e)', () => {
     it('should return 404 when link with provided code does not exist', async () => {
       const code = 'qwertyop';
 
-      const response = await request(app.getHttpServer()).get(
-        `${modulePath}/${code}`,
-      );
+      const response = await request(app.getHttpServer())
+        .get(`${modulePath}/${code}`)
+        .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
       expect(response.body.message).toBe(`Link with code ${code} not found`);
     });
+  });
+
+  describe('Authorization', () => {
+    const endpoints = it.each([
+      ['get', modulePath],
+      ['post', modulePath],
+      ['get', `${modulePath}/somecode`],
+    ] as const);
+    const wrongKey = 'b'.repeat(32);
+
+    endpoints(
+      'should return 401 for %s %s without api key',
+      async (method, path) => {
+        const response = await request(app.getHttpServer())[method](path);
+
+        expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
+        expect(response.body.message).toBe('Unauthorized');
+      },
+    );
+
+    endpoints(
+      'should return 401 for %s %s with wrong api key',
+      async (method, path) => {
+        const response = await request(app.getHttpServer())
+          [method](path)
+          .set('x-api-key', wrongKey);
+
+        expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
+        expect(response.body.message).toBe('Unauthorized');
+      },
+    );
   });
 
   describe('GET /:code', () => {

@@ -7,6 +7,7 @@ export const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   PORT: port.default(3000),
+  API_KEY: z.string().min(32),
   DB_HOST: z.string().nonempty(),
   DB_USERNAME: z.string().nonempty(),
   DB_PASSWORD: z.string().nonempty(),
