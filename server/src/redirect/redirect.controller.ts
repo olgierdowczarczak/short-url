@@ -6,7 +6,7 @@ import {
   HttpStatus,
   type HttpRedirectResponse,
 } from '@nestjs/common';
-import { LinksService } from './links.service.js';
+import { LinksService } from '../links/links.service.js';
 
 @Controller()
 export class RedirectController {

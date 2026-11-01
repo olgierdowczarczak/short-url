@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { RedirectController } from './redirect.controller.js';
-import { LinksService } from './links.service.js';
-import { buildLink } from './testing/link.fixtures.js';
+import { LinksService } from '../links/links.service.js';
+import { buildLink } from '../links/testing/link.fixtures.js';
 
 describe('RedirectController', () => {
   let controller: RedirectController;

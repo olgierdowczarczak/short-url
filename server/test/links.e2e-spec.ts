@@ -17,7 +17,7 @@ describe('Links (e2e)', () => {
   let linksRepository: Repository<Link>;
   let apiKey: string;
 
-  const modulePath = '/links';
+  const modulePath = '/api/links';
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -198,26 +198,22 @@ describe('Links (e2e)', () => {
     );
   });
 
-  describe('GET /:code', () => {
-    it('should redirect to the original url when link exists', async () => {
-      const existingLink = buildLink();
-      await linksRepository.insert(existingLink);
+  describe('API prefix', () => {
+    const endpoints = it.each([
+      ['get', '/links'],
+      ['post', '/links'],
+      ['get', '/links/somecode'],
+    ] as const);
 
-      const response = await request(app.getHttpServer()).get(
-        `/${existingLink.code}`,
-      );
+    endpoints(
+      'should return 404 for %s %s without /api prefix',
+      async (method, path) => {
+        const response = await request(app.getHttpServer())
+          [method](path)
+          .set('x-api-key', apiKey);
 
-      expect(response.statusCode).toBe(HttpStatus.FOUND);
-      expect(response.headers.location).toBe(existingLink.url);
-    });
-
-    it('should return 404 when link with provided code does not exist', async () => {
-      const code = 'qwertyop';
-
-      const response = await request(app.getHttpServer()).get(`/${code}`);
-
-      expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
-      expect(response.body.message).toBe(`Link with code ${code} not found`);
-    });
+        expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
+      },
+    );
   });
 });
