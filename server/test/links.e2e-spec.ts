@@ -70,13 +70,15 @@ describe('Links (e2e)', () => {
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toHaveLength(2);
-      expect(response.body[0]).toMatchObject({
+      expect(response.body[0]).toEqual({
         code: newerLink.code,
         url: newerLink.url,
+        createdAt: newerLink.createdAt.toISOString(),
       });
-      expect(response.body[1]).toMatchObject({
+      expect(response.body[1]).toEqual({
         code: olderLink.code,
         url: olderLink.url,
+        createdAt: olderLink.createdAt.toISOString(),
       });
     });
   });
@@ -91,9 +93,10 @@ describe('Links (e2e)', () => {
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.CREATED);
-      expect(response.body).toMatchObject({
+      expect(response.body).toEqual({
         code: expect.stringMatching(CODE_PATTERN),
         url,
+        createdAt: expect.any(String),
       });
       const savedLink = await linksRepository.findOneBy({
         code: response.body.code,
@@ -145,9 +148,10 @@ describe('Links (e2e)', () => {
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
-      expect(response.body).toMatchObject({
+      expect(response.body).toEqual({
         code: existingLink.code,
         url: existingLink.url,
+        createdAt: expect.any(String),
       });
     });
 
