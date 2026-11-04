@@ -48,4 +48,8 @@ export class LinksService {
     }
     return link;
   }
+
+  async incrementClicks(code: string): Promise<void> {
+    await this.linksRepository.increment({ code }, 'clicks', 1);
+  }
 }

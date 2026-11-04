@@ -10,4 +10,7 @@ export class LinkResponseDto {
 
   @Expose()
   createdAt: Date;
+
+  @Expose()
+  clicks: number;
 }

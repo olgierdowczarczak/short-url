@@ -18,7 +18,7 @@ describe('Redirect (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    await app.init();
+    await app.listen(0);
 
     linksRepository = app.get(getRepositoryToken(Link));
   });
@@ -51,6 +51,43 @@ describe('Redirect (e2e)', () => {
 
       expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
       expect(response.body.message).toBe(`Link with code ${code} not found`);
+    });
+
+    it('should increment click count after redirect', async () => {
+      const existingLink = buildLink({ clicks: 5 });
+      const counterAfterIncrement = existingLink.clicks + 1;
+      await linksRepository.insert(existingLink);
+
+      const response = await request(app.getHttpServer()).get(
+        `/${existingLink.code}`,
+      );
+
+      expect(response.statusCode).toBe(HttpStatus.FOUND);
+      const updatedLink = await linksRepository.findOneBy({
+        code: existingLink.code,
+      });
+      expect(updatedLink?.clicks).toBe(counterAfterIncrement);
+    });
+
+    it('should count every click when link is visited concurrently', async () => {
+      const existingLink = buildLink({ clicks: 5 });
+      const numberOfVisitors = 10;
+      const counterAfterIncrement = existingLink.clicks + numberOfVisitors;
+      await linksRepository.insert(existingLink);
+
+      const responses = await Promise.all(
+        Array.from({ length: numberOfVisitors }).map(() =>
+          request(app.getHttpServer()).get(`/${existingLink.code}`),
+        ),
+      );
+
+      for (const response of responses) {
+        expect(response.statusCode).toBe(HttpStatus.FOUND);
+      }
+      const updatedLink = await linksRepository.findOneBy({
+        code: existingLink.code,
+      });
+      expect(updatedLink?.clicks).toBe(counterAfterIncrement);
     });
   });
 });

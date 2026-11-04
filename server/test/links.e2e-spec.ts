@@ -74,11 +74,13 @@ describe('Links (e2e)', () => {
         code: newerLink.code,
         url: newerLink.url,
         createdAt: newerLink.createdAt.toISOString(),
+        clicks: newerLink.clicks,
       });
       expect(response.body[1]).toEqual({
         code: olderLink.code,
         url: olderLink.url,
         createdAt: olderLink.createdAt.toISOString(),
+        clicks: olderLink.clicks,
       });
     });
   });
@@ -97,6 +99,7 @@ describe('Links (e2e)', () => {
         code: expect.stringMatching(CODE_PATTERN),
         url,
         createdAt: expect.any(String),
+        clicks: 0,
       });
       const savedLink = await linksRepository.findOneBy({
         code: response.body.code,
@@ -152,6 +155,7 @@ describe('Links (e2e)', () => {
         code: existingLink.code,
         url: existingLink.url,
         createdAt: expect.any(String),
+        clicks: existingLink.clicks,
       });
     });
 
@@ -164,6 +168,22 @@ describe('Links (e2e)', () => {
 
       expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
       expect(response.body.message).toBe(`Link with code ${code} not found`);
+    });
+
+    it('should not modify the click count when retrieving a link', async () => {
+      const existingLink = buildLink();
+      await linksRepository.insert(existingLink);
+      const counterBeforeIncrement = existingLink.clicks;
+
+      const response = await request(app.getHttpServer())
+        .get(`${modulePath}/${existingLink.code}`)
+        .set('x-api-key', apiKey);
+
+      expect(response.statusCode).toBe(HttpStatus.OK);
+      const updatedLink = await linksRepository.findOneBy({
+        code: existingLink.code,
+      });
+      expect(updatedLink?.clicks).toEqual(counterBeforeIncrement);
     });
   });
 

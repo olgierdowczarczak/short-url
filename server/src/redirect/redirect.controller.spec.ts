@@ -8,11 +8,13 @@ describe('RedirectController', () => {
   let controller: RedirectController;
   let linksService: {
     findByCode: ReturnType<typeof vi.fn>;
+    incrementClicks: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     linksService = {
       findByCode: vi.fn(),
+      incrementClicks: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -33,12 +35,15 @@ describe('RedirectController', () => {
       const link = buildLink({ code });
       const expectedResponse = { url: link.url, statusCode: HttpStatus.FOUND };
       linksService.findByCode.mockResolvedValue(link);
+      linksService.incrementClicks.mockResolvedValue(undefined);
 
       const result = await controller.redirect(code);
 
       expect(result).toStrictEqual(expectedResponse);
       expect(linksService.findByCode).toHaveBeenCalledWith(code);
       expect(linksService.findByCode).toHaveBeenCalledOnce();
+      expect(linksService.incrementClicks).toHaveBeenCalledWith(code);
+      expect(linksService.incrementClicks).toHaveBeenCalledOnce();
     });
 
     it('should propagate NotFoundException from service', async () => {
@@ -53,6 +58,7 @@ describe('RedirectController', () => {
       expect(result).toBe(notFoundError);
       expect(linksService.findByCode).toHaveBeenCalledWith(code);
       expect(linksService.findByCode).toHaveBeenCalledOnce();
+      expect(linksService.incrementClicks).not.toHaveBeenCalled();
     });
   });
 });

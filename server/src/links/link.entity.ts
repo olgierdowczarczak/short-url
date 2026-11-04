@@ -18,4 +18,7 @@ export class Link {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
+
+  @Column({ type: 'int', default: 0 })
+  clicks: number;
 }

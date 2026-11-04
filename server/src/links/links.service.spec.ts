@@ -16,6 +16,7 @@ describe('LinksService', () => {
     save: ReturnType<typeof vi.fn>;
     find: ReturnType<typeof vi.fn>;
     findOneBy: ReturnType<typeof vi.fn>;
+    increment: ReturnType<typeof vi.fn>;
   };
   const createQueryFailedError = (errorMessage: string, errorCode: string) =>
     new QueryFailedError(
@@ -30,6 +31,7 @@ describe('LinksService', () => {
       save: vi.fn(),
       find: vi.fn(),
       findOneBy: vi.fn(),
+      increment: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -157,6 +159,22 @@ describe('LinksService', () => {
       expect(result).toBeInstanceOf(NotFoundException);
       expect(result.message).toStrictEqual(`Link with code ${code} not found`);
       expect(linksRepository.findOneBy).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('incrementClicks', () => {
+    it('should increment clicks for existing link', async () => {
+      const code = 'qwertyui';
+      linksRepository.increment.mockResolvedValue(undefined);
+
+      await service.incrementClicks(code);
+
+      expect(linksRepository.increment).toHaveBeenCalledWith(
+        { code },
+        'clicks',
+        1,
+      );
+      expect(linksRepository.increment).toHaveBeenCalledOnce();
     });
   });
 });
