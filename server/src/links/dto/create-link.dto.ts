@@ -1,4 +1,12 @@
-import { IsUrl, MaxLength, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDate,
+  IsOptional,
+  IsUrl,
+  MaxLength,
+  MinDate,
+  MinLength,
+} from 'class-validator';
 
 export class CreateLinkDto {
   @IsUrl({
@@ -8,4 +16,10 @@ export class CreateLinkDto {
   @MinLength(6)
   @MaxLength(2048)
   url: string;
+
+  @Type(() => Date)
+  @IsDate()
+  @MinDate(() => new Date())
+  @IsOptional()
+  expiresAt?: Date | null;
 }

@@ -20,7 +20,7 @@ export class LinksController {
 
   @Post()
   create(@Body() body: CreateLinkDto) {
-    return this.linksService.create(body.url);
+    return this.linksService.create(body);
   }
 
   @Get()

@@ -47,8 +47,7 @@ describe('LinksController', () => {
       const result = await controller.create(dto);
 
       expect(result).toBe(createdLink);
-      expect(linksService.create).toHaveBeenCalledWith(dto.url);
-      expect(linksService.create).toHaveBeenCalledOnce();
+      expect(linksService.create).toHaveBeenCalledExactlyOnceWith(dto);
     });
   });
 
@@ -59,8 +58,7 @@ describe('LinksController', () => {
       const result = await controller.findAll();
 
       expect(result).toBe(links);
-      expect(linksService.findAll).toHaveBeenCalledWith();
-      expect(linksService.findAll).toHaveBeenCalledOnce();
+      expect(linksService.findAll).toHaveBeenCalledExactlyOnceWith();
     });
   });
 
@@ -72,8 +70,7 @@ describe('LinksController', () => {
       const result = await controller.findOne(code);
 
       expect(result).toBe(links[0]);
-      expect(linksService.findByCode).toHaveBeenCalledWith(code);
-      expect(linksService.findByCode).toHaveBeenCalledOnce();
+      expect(linksService.findByCode).toHaveBeenCalledExactlyOnceWith(code);
     });
 
     it('should propagate NotFoundException from service', async () => {
@@ -86,8 +83,7 @@ describe('LinksController', () => {
       const result = await controller.findOne(code).catch((error) => error);
 
       expect(result).toBe(notFoundError);
-      expect(linksService.findByCode).toHaveBeenCalledWith(code);
-      expect(linksService.findByCode).toHaveBeenCalledOnce();
+      expect(linksService.findByCode).toHaveBeenCalledExactlyOnceWith(code);
     });
   });
 });

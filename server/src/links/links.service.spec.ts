@@ -56,15 +56,25 @@ describe('LinksService', () => {
       const regexPattern = /^[A-Za-z0-9_-]{8}$/;
       linksRepository.save.mockResolvedValueOnce(createdLink);
 
-      const result = await service.create(url);
+      const result = await service.create({ url });
 
       expect(result).toBe(createdLink);
-      expect(linksRepository.create).toHaveBeenCalledOnce();
-      expect(linksRepository.create).toHaveBeenCalledWith({
+      expect(linksRepository.create).toHaveBeenCalledExactlyOnceWith({
         code: expect.stringMatching(regexPattern),
         url,
       });
       expect(linksRepository.save).toHaveBeenCalledOnce();
+    });
+
+    it('should pass expiresAt to the repository', async () => {
+      const expiresAt = new Date('2099-01-01T00:00:00Z');
+      linksRepository.save.mockResolvedValueOnce(createdLink);
+
+      await service.create({ url, expiresAt });
+
+      expect(linksRepository.create).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ expiresAt }),
+      );
     });
 
     it('should create a new link when duplication error appears', async () => {
@@ -76,7 +86,7 @@ describe('LinksService', () => {
         .mockRejectedValueOnce(duplicationError)
         .mockResolvedValueOnce(createdLink);
 
-      const result = await service.create(url);
+      const result = await service.create({ url });
 
       expect(result).toBe(createdLink);
       expect(linksRepository.create).toHaveBeenCalledTimes(2);
@@ -94,7 +104,7 @@ describe('LinksService', () => {
       );
       linksRepository.save.mockRejectedValue(duplicationError);
 
-      const result = await service.create(url).catch((error) => error);
+      const result = await service.create({ url }).catch((error) => error);
 
       expect(result).toBeInstanceOf(InternalServerErrorException);
       expect(linksRepository.create).toHaveBeenCalledTimes(maxAttempts);
@@ -108,7 +118,7 @@ describe('LinksService', () => {
       );
       linksRepository.save.mockRejectedValue(unexpectedError);
 
-      const result = await service.create(url).catch((error) => error);
+      const result = await service.create({ url }).catch((error) => error);
 
       expect(result).toBe(unexpectedError);
       expect(linksRepository.create).toHaveBeenCalledOnce();
@@ -146,8 +156,9 @@ describe('LinksService', () => {
       const result = await service.findByCode(code);
 
       expect(result).toBe(links[0]);
-      expect(linksRepository.findOneBy).toHaveBeenCalledWith({ code });
-      expect(linksRepository.findOneBy).toHaveBeenCalledOnce();
+      expect(linksRepository.findOneBy).toHaveBeenCalledExactlyOnceWith({
+        code,
+      });
     });
 
     it('should throw NotFoundException when link does not exist', async () => {
@@ -158,7 +169,9 @@ describe('LinksService', () => {
 
       expect(result).toBeInstanceOf(NotFoundException);
       expect(result.message).toStrictEqual(`Link with code ${code} not found`);
-      expect(linksRepository.findOneBy).toHaveBeenCalledOnce();
+      expect(linksRepository.findOneBy).toHaveBeenCalledExactlyOnceWith({
+        code,
+      });
     });
   });
 
@@ -169,12 +182,11 @@ describe('LinksService', () => {
 
       await service.incrementClicks(code);
 
-      expect(linksRepository.increment).toHaveBeenCalledWith(
+      expect(linksRepository.increment).toHaveBeenCalledExactlyOnceWith(
         { code },
         'clicks',
         1,
       );
-      expect(linksRepository.increment).toHaveBeenCalledOnce();
     });
   });
 });

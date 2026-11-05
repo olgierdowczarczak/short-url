@@ -75,12 +75,14 @@ describe('Links (e2e)', () => {
         url: newerLink.url,
         createdAt: newerLink.createdAt.toISOString(),
         clicks: newerLink.clicks,
+        expiresAt: null,
       });
       expect(response.body[1]).toEqual({
         code: olderLink.code,
         url: olderLink.url,
         createdAt: olderLink.createdAt.toISOString(),
         clicks: olderLink.clicks,
+        expiresAt: null,
       });
     });
   });
@@ -100,6 +102,7 @@ describe('Links (e2e)', () => {
         url,
         createdAt: expect.any(String),
         clicks: 0,
+        expiresAt: null,
       });
       const savedLink = await linksRepository.findOneBy({
         code: response.body.code,
@@ -130,6 +133,15 @@ describe('Links (e2e)', () => {
         'request contains additional fields',
         { url: 'https://example.com', foo: 'bar' },
       ],
+      [
+        'expiresAt is in the past',
+        { url: 'https://example.com', expiresAt: '2000-01-01T00:00:00.000Z' },
+      ],
+      [
+        'expiresAt has invalid format',
+        { url: 'https://example.com', expiresAt: 'qwerty' },
+      ],
+      ['expiresAt is a number', { url: 'https://example.com', expiresAt: 123 }],
     ])('should return 400 when %s', async (_, payload) => {
       const response = await request(app.getHttpServer())
         .post(modulePath)
@@ -138,6 +150,25 @@ describe('Links (e2e)', () => {
 
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
       expect(await linksRepository.count()).toBe(0);
+    });
+
+    it.each([
+      ['expiresAt in future', '3000-01-01T00:00:00.000Z'],
+      ['expiresAt is null', null],
+    ])('should create a link when %s', async (_, expiresAt) => {
+      const url = 'https://example.com';
+
+      const response = await request(app.getHttpServer())
+        .post(modulePath)
+        .send({ url, expiresAt })
+        .set('x-api-key', apiKey);
+
+      expect(response.statusCode).toBe(HttpStatus.CREATED);
+      expect(response.body.expiresAt).toEqual(expiresAt);
+      const savedLink = await linksRepository.findOneBy({
+        code: response.body.code,
+      });
+      expect(savedLink?.expiresAt?.toISOString() ?? null).toBe(expiresAt);
     });
   });
 
@@ -156,6 +187,7 @@ describe('Links (e2e)', () => {
         url: existingLink.url,
         createdAt: expect.any(String),
         clicks: existingLink.clicks,
+        expiresAt: null,
       });
     });
 

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Link } from './link.entity.js';
+import { CreateLinkDto } from './dto/create-link.dto.js';
 
 @Injectable()
 export class LinksService {
@@ -15,11 +16,12 @@ export class LinksService {
     private readonly linksRepository: Repository<Link>,
   ) {}
 
-  async create(url: string): Promise<Link> {
+  async create(dto: CreateLinkDto): Promise<Link> {
     for (let attempt = 0; attempt < 3; attempt++) {
       const link = this.linksRepository.create({
         code: randomBytes(6).toString('base64url'),
-        url,
+        url: dto.url,
+        expiresAt: dto.expiresAt,
       });
 
       try {

@@ -13,4 +13,7 @@ export class LinkResponseDto {
 
   @Expose()
   clicks: number;
+
+  @Expose()
+  expiresAt: Date | null;
 }
