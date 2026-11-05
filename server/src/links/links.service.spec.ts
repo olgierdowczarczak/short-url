@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LinksService } from './links.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
+  GoneException,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
@@ -175,18 +176,69 @@ describe('LinksService', () => {
     });
   });
 
-  describe('incrementClicks', () => {
+  describe('resolveRedirect', () => {
+    const now = new Date('2026-01-01T00:00:00Z');
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(now);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('should increment clicks for existing link', async () => {
       const code = 'qwertyui';
       linksRepository.increment.mockResolvedValue(undefined);
+      linksRepository.findOneBy.mockResolvedValue(links[0]);
 
-      await service.incrementClicks(code);
+      const result = await service.resolveRedirect(code);
 
+      expect(result).toBe(links[0]);
       expect(linksRepository.increment).toHaveBeenCalledExactlyOnceWith(
         { code },
         'clicks',
         1,
       );
+    });
+
+    it('should increment clicks when link expires in the future', async () => {
+      const link = buildLink({ expiresAt: new Date(now.getTime() + 1000) });
+      linksRepository.findOneBy.mockResolvedValue(link);
+
+      const result = await service.resolveRedirect(link.code);
+
+      expect(result).toBe(link);
+      expect(linksRepository.increment).toHaveBeenCalledExactlyOnceWith(
+        { code: link.code },
+        'clicks',
+        1,
+      );
+    });
+
+    it('should throw GoneException when link has already expired', async () => {
+      const link = buildLink({ expiresAt: new Date(now.getTime() - 1000) });
+      linksRepository.findOneBy.mockResolvedValue(link);
+
+      const result = await service
+        .resolveRedirect(link.code)
+        .catch((error) => error);
+
+      expect(result).toBeInstanceOf(GoneException);
+      expect(linksRepository.increment).not.toHaveBeenCalled();
+    });
+
+    it('should throw GoneException when link expires exactly now', async () => {
+      const link = buildLink({ expiresAt: now });
+      linksRepository.findOneBy.mockResolvedValue(link);
+
+      const result = await service
+        .resolveRedirect(link.code)
+        .catch((error) => error);
+
+      expect(result).toBeInstanceOf(GoneException);
+      expect(linksRepository.increment).not.toHaveBeenCalled();
     });
   });
 });

@@ -191,6 +191,25 @@ describe('Links (e2e)', () => {
       });
     });
 
+    it('should return link when link with provided code exists and is expired', async () => {
+      const expiresAt = new Date('2000-01-01T00:00:00Z');
+      const existingLink = buildLink({ expiresAt });
+      await linksRepository.insert(existingLink);
+
+      const response = await request(app.getHttpServer())
+        .get(`${modulePath}/${existingLink.code}`)
+        .set('x-api-key', apiKey);
+
+      expect(response.statusCode).toBe(HttpStatus.OK);
+      expect(response.body).toEqual({
+        code: existingLink.code,
+        url: existingLink.url,
+        createdAt: expect.any(String),
+        clicks: existingLink.clicks,
+        expiresAt: expiresAt.toISOString(),
+      });
+    });
+
     it('should return 404 when link with provided code does not exist', async () => {
       const code = 'qwertyop';
 

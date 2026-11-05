@@ -15,8 +15,7 @@ export class RedirectController {
   @Get(':code')
   @Redirect()
   async redirect(@Param('code') code: string): Promise<HttpRedirectResponse> {
-    const link = await this.linksService.findByCode(code);
-    await this.linksService.incrementClicks(link.code);
+    const link = await this.linksService.resolveRedirect(code);
     return { url: link.url, statusCode: HttpStatus.FOUND };
   }
 }

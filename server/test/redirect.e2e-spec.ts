@@ -32,8 +32,10 @@ describe('Redirect (e2e)', () => {
   });
 
   describe('GET /:code', () => {
-    it('should redirect to the original url when link exists', async () => {
-      const existingLink = buildLink();
+    it('should redirect to the original url when link exists and is not expired', async () => {
+      const existingLink = buildLink({
+        expiresAt: new Date('3000-01-01T00:00:00.000Z'),
+      });
       await linksRepository.insert(existingLink);
 
       const response = await request(app.getHttpServer()).get(
@@ -88,6 +90,23 @@ describe('Redirect (e2e)', () => {
         code: existingLink.code,
       });
       expect(updatedLink?.clicks).toBe(counterAfterIncrement);
+    });
+
+    it('should return 410 and not count a click when link is expired', async () => {
+      const existingLink = buildLink({
+        expiresAt: new Date('2000-01-01T00:00:00.000Z'),
+      });
+      await linksRepository.insert(existingLink);
+
+      const response = await request(app.getHttpServer()).get(
+        `/${existingLink.code}`,
+      );
+
+      expect(response.statusCode).toBe(HttpStatus.GONE);
+      const updatedLink = await linksRepository.findOneBy({
+        code: existingLink.code,
+      });
+      expect(updatedLink?.clicks).toBe(existingLink.clicks);
     });
   });
 });

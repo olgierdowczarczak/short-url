@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  GoneException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Link } from './link.entity.js';
@@ -51,7 +52,16 @@ export class LinksService {
     return link;
   }
 
-  async incrementClicks(code: string): Promise<void> {
+  private async incrementClicks(code: string): Promise<void> {
     await this.linksRepository.increment({ code }, 'clicks', 1);
+  }
+
+  async resolveRedirect(code: string): Promise<Link> {
+    const link = await this.findByCode(code);
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      throw new GoneException(`Link with code ${code} has expired`);
+    }
+    await this.incrementClicks(code);
+    return link;
   }
 }

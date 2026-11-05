@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpStatus, NotFoundException } from '@nestjs/common';
+import { GoneException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { RedirectController } from './redirect.controller.js';
 import { LinksService } from '../links/links.service.js';
 import { buildLink } from '../links/testing/link.fixtures.js';
@@ -7,14 +7,12 @@ import { buildLink } from '../links/testing/link.fixtures.js';
 describe('RedirectController', () => {
   let controller: RedirectController;
   let linksService: {
-    findByCode: ReturnType<typeof vi.fn>;
-    incrementClicks: ReturnType<typeof vi.fn>;
+    resolveRedirect: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     linksService = {
-      findByCode: vi.fn(),
-      incrementClicks: vi.fn(),
+      resolveRedirect: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,16 +32,14 @@ describe('RedirectController', () => {
       const code = 'qwertyui';
       const link = buildLink({ code });
       const expectedResponse = { url: link.url, statusCode: HttpStatus.FOUND };
-      linksService.findByCode.mockResolvedValue(link);
-      linksService.incrementClicks.mockResolvedValue(undefined);
+      linksService.resolveRedirect.mockResolvedValue(link);
 
       const result = await controller.redirect(code);
 
       expect(result).toStrictEqual(expectedResponse);
-      expect(linksService.findByCode).toHaveBeenCalledWith(code);
-      expect(linksService.findByCode).toHaveBeenCalledOnce();
-      expect(linksService.incrementClicks).toHaveBeenCalledWith(code);
-      expect(linksService.incrementClicks).toHaveBeenCalledOnce();
+      expect(linksService.resolveRedirect).toHaveBeenCalledExactlyOnceWith(
+        code,
+      );
     });
 
     it('should propagate NotFoundException from service', async () => {
@@ -51,14 +47,27 @@ describe('RedirectController', () => {
       const notFoundError = new NotFoundException(
         `Link with code ${code} not found`,
       );
-      linksService.findByCode.mockRejectedValue(notFoundError);
+      linksService.resolveRedirect.mockRejectedValue(notFoundError);
 
       const result = await controller.redirect(code).catch((error) => error);
 
       expect(result).toBe(notFoundError);
-      expect(linksService.findByCode).toHaveBeenCalledWith(code);
-      expect(linksService.findByCode).toHaveBeenCalledOnce();
-      expect(linksService.incrementClicks).not.toHaveBeenCalled();
+      expect(linksService.resolveRedirect).toHaveBeenCalledExactlyOnceWith(
+        code,
+      );
+    });
+
+    it('should propagate GoneException from service', async () => {
+      const code = 'expired1';
+      const goneError = new GoneException(`Link with code ${code} has expired`);
+      linksService.resolveRedirect.mockRejectedValue(goneError);
+
+      const result = await controller.redirect(code).catch((error) => error);
+
+      expect(result).toBe(goneError);
+      expect(linksService.resolveRedirect).toHaveBeenCalledExactlyOnceWith(
+        code,
+      );
     });
   });
 });
