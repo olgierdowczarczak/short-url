@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LinksService } from './links.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
+  ConflictException,
   GoneException,
   InternalServerErrorException,
   NotFoundException,
@@ -123,6 +124,61 @@ describe('LinksService', () => {
 
       expect(result).toBe(unexpectedError);
       expect(linksRepository.create).toHaveBeenCalledOnce();
+      expect(linksRepository.save).toHaveBeenCalledOnce();
+    });
+
+    it('should create a new link with alias', async () => {
+      const alias = 'my-alias';
+      linksRepository.save.mockResolvedValueOnce(createdLink);
+
+      const result = await service.create({ url, alias });
+
+      expect(result).toBe(createdLink);
+      expect(linksRepository.create).toHaveBeenCalledExactlyOnceWith({
+        code: alias,
+        url,
+      });
+      expect(linksRepository.save).toHaveBeenCalledOnce();
+    });
+
+    it('should throw ConflictException when alias is already taken', async () => {
+      const alias = 'my-alias';
+      const duplicationError = createQueryFailedError(
+        'duplicate key value violates unique constraint',
+        '23505',
+      );
+      linksRepository.save.mockRejectedValueOnce(duplicationError);
+
+      const result = await service
+        .create({ url, alias })
+        .catch((error) => error);
+
+      expect(result).toBeInstanceOf(ConflictException);
+      expect(result.message).toBe(`Alias ${alias} is already taken`);
+      expect(linksRepository.create).toHaveBeenCalledExactlyOnceWith({
+        code: alias,
+        url,
+      });
+      expect(linksRepository.save).toHaveBeenCalledOnce();
+    });
+
+    it('should rethrow other database errors when creating link with alias', async () => {
+      const alias = 'my-alias';
+      const unexpectedError = createQueryFailedError(
+        'not_null_violation',
+        '23502',
+      );
+      linksRepository.save.mockRejectedValueOnce(unexpectedError);
+
+      const result = await service
+        .create({ url, alias })
+        .catch((error) => error);
+
+      expect(result).toBe(unexpectedError);
+      expect(linksRepository.create).toHaveBeenCalledExactlyOnceWith({
+        code: alias,
+        url,
+      });
       expect(linksRepository.save).toHaveBeenCalledOnce();
     });
   });
