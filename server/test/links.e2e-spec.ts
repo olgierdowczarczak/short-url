@@ -170,6 +170,85 @@ describe('Links (e2e)', () => {
       });
       expect(savedLink?.expiresAt?.toISOString() ?? null).toBe(expiresAt);
     });
+
+    it('should create a link when alias is provided', async () => {
+      const url = 'https://example.com';
+      const alias = 'my-alias';
+
+      const response = await request(app.getHttpServer())
+        .post(modulePath)
+        .send({ url, alias })
+        .set('x-api-key', apiKey);
+
+      expect(response.statusCode).toBe(HttpStatus.CREATED);
+      expect(response.body).toEqual({
+        code: alias,
+        url,
+        createdAt: expect.any(String),
+        clicks: 0,
+        expiresAt: null,
+      });
+      const savedLink = await linksRepository.findOneBy({
+        code: response.body.code,
+      });
+      expect(savedLink?.code).toBe(alias);
+    });
+
+    it('should return 409 when link with provided alias already exists', async () => {
+      const url = 'https://example.com';
+      const alias = 'my-alias';
+      const existingLink = buildLink({ url, code: alias });
+      await linksRepository.insert(existingLink);
+
+      const response = await request(app.getHttpServer())
+        .post(modulePath)
+        .send({ url, alias })
+        .set('x-api-key', apiKey);
+
+      expect(response.statusCode).toBe(HttpStatus.CONFLICT);
+      const linksCount = await linksRepository.count();
+      expect(linksCount).toBe(1);
+    });
+
+    it('should return 409 when attempting to create multiple links with the same alias', async () => {
+      const url = 'https://example.com';
+      const alias = 'my-alias';
+      const createRequest = () =>
+        request(app.getHttpServer())
+          .post(modulePath)
+          .send({ url, alias })
+          .set('x-api-key', apiKey);
+
+      const requests = await Promise.all([createRequest(), createRequest()]);
+
+      const responses = requests.sort((a, b) => a.statusCode - b.statusCode);
+      expect(responses[0].statusCode).toBe(HttpStatus.CREATED);
+      expect(responses[1].statusCode).toBe(HttpStatus.CONFLICT);
+      const linksCount = await linksRepository.count();
+      expect(linksCount).toBe(1);
+    });
+
+    it.each<[string, unknown]>([
+      ['is too short', 'ab'],
+      ['is too long', 'a'.repeat(33)],
+      ['is not a string', 123],
+      ['contains invalid characters', '!@#$%^&*()'],
+      ['is restricted', 'api'],
+      ['is restricted', 'API'],
+      ['is restricted', 'docs'],
+      ['is restricted', 'DOCS'],
+      ['is restricted', 'health'],
+      ['is restricted', 'HEALTH'],
+    ])('should return 400 when alias %s', async (_, alias) => {
+      const url = 'https://example.com';
+
+      const response = await request(app.getHttpServer())
+        .post(modulePath)
+        .send({ url, alias })
+        .set('x-api-key', apiKey);
+
+      expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
+    });
   });
 
   describe(`GET ${modulePath}/:code`, () => {

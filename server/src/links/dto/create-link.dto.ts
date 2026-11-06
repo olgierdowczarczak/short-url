@@ -3,10 +3,12 @@ import {
   IsDate,
   IsOptional,
   IsUrl,
+  Matches,
   MaxLength,
   MinDate,
   MinLength,
 } from 'class-validator';
+import { IsNotReservedAlias } from '../validators/is-not-reserved-alias.validator.js';
 
 export class CreateLinkDto {
   @IsUrl({
@@ -22,4 +24,9 @@ export class CreateLinkDto {
   @MinDate(() => new Date())
   @IsOptional()
   expiresAt?: Date | null;
+
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9_-]{3,32}$/)
+  @IsNotReservedAlias()
+  alias?: string | null;
 }

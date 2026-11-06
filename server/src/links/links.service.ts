@@ -1,14 +1,16 @@
 import { randomBytes } from 'node:crypto';
-import { Repository, QueryFailedError } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
   GoneException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Link } from './link.entity.js';
 import { CreateLinkDto } from './dto/create-link.dto.js';
+import { isUniqueViolation } from '../utils/is-unique-violation.js';
 
 @Injectable()
 export class LinksService {
@@ -17,27 +19,51 @@ export class LinksService {
     private readonly linksRepository: Repository<Link>,
   ) {}
 
-  async create(dto: CreateLinkDto): Promise<Link> {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const link = this.linksRepository.create({
-        code: randomBytes(6).toString('base64url'),
-        url: dto.url,
-        expiresAt: dto.expiresAt,
-      });
+  private createLink(dto: CreateLinkDto, code: string): Link {
+    return this.linksRepository.create({
+      code,
+      url: dto.url,
+      expiresAt: dto.expiresAt,
+    });
+  }
 
+  private async createLinkWithAlias(
+    dto: CreateLinkDto,
+    alias: string,
+  ): Promise<Link> {
+    const link = this.createLink(dto, alias);
+    try {
+      return await this.linksRepository.save(link);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(`Alias ${alias} is already taken`);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  private async createLinkWithCode(dto: CreateLinkDto): Promise<Link> {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const link = this.createLink(dto, randomBytes(6).toString('base64url'));
       try {
         return await this.linksRepository.save(link);
       } catch (error) {
-        if (
-          error instanceof QueryFailedError &&
-          error.driverError.code === '23505'
-        ) {
+        if (isUniqueViolation(error)) {
           continue;
         }
         throw error;
       }
     }
     throw new InternalServerErrorException('Failed to create link');
+  }
+
+  async create(dto: CreateLinkDto): Promise<Link> {
+    if (dto.alias) {
+      return await this.createLinkWithAlias(dto, dto.alias);
+    } else {
+      return await this.createLinkWithCode(dto);
+    }
   }
 
   async findAll(): Promise<Link[]> {
