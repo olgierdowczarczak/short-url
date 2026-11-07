@@ -9,6 +9,7 @@ import { AppModule } from '../src/app.module.js';
 import { Link } from '../src/links/link.entity.js';
 import { buildLink } from '../src/links/testing/link.fixtures.js';
 import type { Env } from '../src/config/env.schema.js';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 const CODE_PATTERN = /^[A-Za-z0-9_-]{8}$/;
 
@@ -22,7 +23,10 @@ describe('Links (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();

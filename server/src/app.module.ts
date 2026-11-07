@@ -3,7 +3,12 @@ import {
   Module,
   ValidationPipe,
 } from '@nestjs/common';
-import { APP_PIPE, APP_INTERCEPTOR, RouterModule } from '@nestjs/core';
+import {
+  APP_PIPE,
+  APP_INTERCEPTOR,
+  RouterModule,
+  APP_GUARD,
+} from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { type Env, envSchema } from './config/env.schema.js';
@@ -11,6 +16,7 @@ import { buildTypeOrmOptions } from './config/typeorm.config.js';
 import { getEnvFilePaths } from './config/env-files.js';
 import { LinksModule } from './links/links.module.js';
 import { RedirectModule } from './redirect/redirect.module.js';
+import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -19,6 +25,12 @@ import { RedirectModule } from './redirect/redirect.module.js';
       validationSchema: envSchema,
       envFilePath: getEnvFilePaths(),
     }),
+    ThrottlerModule.forRoot([
+      {
+        limit: 100,
+        ttl: minutes(1),
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService<Env, true>) => ({
@@ -54,6 +66,11 @@ import { RedirectModule } from './redirect/redirect.module.js';
         forbidNonWhitelisted: true,
         transform: true,
       }),
+    },
+    ThrottlerGuard,
+    {
+      provide: APP_GUARD,
+      useExisting: ThrottlerGuard,
     },
   ],
 })
