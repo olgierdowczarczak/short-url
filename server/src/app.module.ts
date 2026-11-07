@@ -17,6 +17,7 @@ import { getEnvFilePaths } from './config/env-files.js';
 import { LinksModule } from './links/links.module.js';
 import { RedirectModule } from './redirect/redirect.module.js';
 import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { HealthModule } from './health/health.module.js';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         autoLoadEntities: true,
       }),
     }),
+    HealthModule,
     LinksModule,
     RedirectModule,
     RouterModule.register([
