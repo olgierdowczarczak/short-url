@@ -13,6 +13,7 @@ export const envSchema = z.object({
   DB_PASSWORD: z.string().nonempty(),
   DB_NAME: z.string().nonempty(),
   DB_PORT: port,
+  CORS_ORIGINS: z.string().nonempty(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -15,7 +15,7 @@ describe('Swagger (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     setupSwagger(app);
-    await app.listen(0);
+    await app.init();
   });
 
   afterEach(async () => {
