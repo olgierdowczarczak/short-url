@@ -1,6 +1,12 @@
 import { registerDecorator, type ValidationOptions } from 'class-validator';
 
-const RESERVED_ALIASES = new Set(['api', 'docs', 'health']);
+const RESERVED_ALIASES = new Set([
+  'api',
+  'docs',
+  'docs-json',
+  'docs-yaml',
+  'health',
+]);
 
 export function IsNotReservedAlias(validationOptions?: ValidationOptions) {
   return (object: object, propertyName: string) => {

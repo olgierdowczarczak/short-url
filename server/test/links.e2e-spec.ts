@@ -241,6 +241,8 @@ describe('Links (e2e)', () => {
       ['is restricted', 'API'],
       ['is restricted', 'docs'],
       ['is restricted', 'DOCS'],
+      ['is restricted', 'docs-json'],
+      ['is restricted', 'docs-yaml'],
       ['is restricted', 'health'],
       ['is restricted', 'HEALTH'],
     ])('should return 400 when alias %s', async (_, alias) => {

@@ -13,7 +13,7 @@ const validateAlias = (alias: unknown) => {
 };
 
 describe('IsNotReservedAlias', () => {
-  it.each(['api', 'docs', 'health', 'HEALTH', 'Api'])(
+  it.each(['api', 'docs', 'docs-json', 'docs-yaml', 'health', 'HEALTH', 'Api'])(
     'alias should not pass using %s',
     (alias) => {
       const errors = validateAlias(alias);
