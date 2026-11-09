@@ -18,8 +18,6 @@ describe('Links (e2e)', () => {
   let linksRepository: Repository<Link>;
   let apiKey: string;
 
-  const modulePath = '/api/links';
-
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -45,10 +43,10 @@ describe('Links (e2e)', () => {
     await app.close();
   });
 
-  describe(`GET ${modulePath}`, () => {
+  describe('GET /api/links', () => {
     it('should return an empty list when there are no links', async () => {
       const response = await request(app.getHttpServer())
-        .get(modulePath)
+        .get('/api/links')
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
@@ -69,7 +67,7 @@ describe('Links (e2e)', () => {
       await linksRepository.insert([olderLink, newerLink]);
 
       const response = await request(app.getHttpServer())
-        .get(modulePath)
+        .get('/api/links')
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
@@ -91,12 +89,12 @@ describe('Links (e2e)', () => {
     });
   });
 
-  describe(`POST ${modulePath}`, () => {
+  describe('POST /api/links', () => {
     it('should create a link', async () => {
       const url = 'https://example.com';
 
       const response = await request(app.getHttpServer())
-        .post(modulePath)
+        .post('/api/links')
         .send({ url })
         .set('x-api-key', apiKey);
 
@@ -119,7 +117,7 @@ describe('Links (e2e)', () => {
       await linksRepository.insert(existingLink);
 
       const response = await request(app.getHttpServer())
-        .post(modulePath)
+        .post('/api/links')
         .send({ url: existingLink.url })
         .set('x-api-key', apiKey);
 
@@ -148,7 +146,7 @@ describe('Links (e2e)', () => {
       ['expiresAt is a number', { url: 'https://example.com', expiresAt: 123 }],
     ])('should return 400 when %s', async (_, payload) => {
       const response = await request(app.getHttpServer())
-        .post(modulePath)
+        .post('/api/links')
         .send(payload)
         .set('x-api-key', apiKey);
 
@@ -163,7 +161,7 @@ describe('Links (e2e)', () => {
       const url = 'https://example.com';
 
       const response = await request(app.getHttpServer())
-        .post(modulePath)
+        .post('/api/links')
         .send({ url, expiresAt })
         .set('x-api-key', apiKey);
 
@@ -180,7 +178,7 @@ describe('Links (e2e)', () => {
       const alias = 'my-alias';
 
       const response = await request(app.getHttpServer())
-        .post(modulePath)
+        .post('/api/links')
         .send({ url, alias })
         .set('x-api-key', apiKey);
 
@@ -205,7 +203,7 @@ describe('Links (e2e)', () => {
       await linksRepository.insert(existingLink);
 
       const response = await request(app.getHttpServer())
-        .post(modulePath)
+        .post('/api/links')
         .send({ url, alias })
         .set('x-api-key', apiKey);
 
@@ -219,7 +217,7 @@ describe('Links (e2e)', () => {
       const alias = 'my-alias';
       const createRequest = () =>
         request(app.getHttpServer())
-          .post(modulePath)
+          .post('/api/links')
           .send({ url, alias })
           .set('x-api-key', apiKey);
 
@@ -249,7 +247,7 @@ describe('Links (e2e)', () => {
       const url = 'https://example.com';
 
       const response = await request(app.getHttpServer())
-        .post(modulePath)
+        .post('/api/links')
         .send({ url, alias })
         .set('x-api-key', apiKey);
 
@@ -257,13 +255,13 @@ describe('Links (e2e)', () => {
     });
   });
 
-  describe(`GET ${modulePath}/:code`, () => {
+  describe('GET /api/links/:code', () => {
     it('should return link when link with provided code exists', async () => {
       const existingLink = buildLink();
       await linksRepository.insert(existingLink);
 
       const response = await request(app.getHttpServer())
-        .get(`${modulePath}/${existingLink.code}`)
+        .get(`/api/links/${existingLink.code}`)
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
@@ -282,7 +280,7 @@ describe('Links (e2e)', () => {
       await linksRepository.insert(existingLink);
 
       const response = await request(app.getHttpServer())
-        .get(`${modulePath}/${existingLink.code}`)
+        .get(`/api/links/${existingLink.code}`)
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
@@ -299,7 +297,7 @@ describe('Links (e2e)', () => {
       const code = 'qwertyop';
 
       const response = await request(app.getHttpServer())
-        .get(`${modulePath}/${code}`)
+        .get(`/api/links/${code}`)
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
@@ -312,7 +310,7 @@ describe('Links (e2e)', () => {
       const counterBeforeIncrement = existingLink.clicks;
 
       const response = await request(app.getHttpServer())
-        .get(`${modulePath}/${existingLink.code}`)
+        .get(`/api/links/${existingLink.code}`)
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
@@ -325,9 +323,9 @@ describe('Links (e2e)', () => {
 
   describe('Authorization', () => {
     const endpoints = it.each([
-      ['get', modulePath],
-      ['post', modulePath],
-      ['get', `${modulePath}/somecode`],
+      ['get', '/api/links'],
+      ['post', '/api/links'],
+      ['get', '/api/links/somecode'],
     ] as const);
     const wrongKey = 'b'.repeat(32);
 

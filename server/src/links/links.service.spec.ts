@@ -1,4 +1,3 @@
-import { QueryFailedError } from 'typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LinksService } from './links.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -10,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Link } from './link.entity.js';
 import { buildLink, links } from './testing/link.fixtures.js';
+import { createQueryFailedError } from '../utils/testing/query-failed-error.js';
 
 describe('LinksService', () => {
   let service: LinksService;
@@ -20,12 +20,6 @@ describe('LinksService', () => {
     findOneBy: ReturnType<typeof vi.fn>;
     increment: ReturnType<typeof vi.fn>;
   };
-  const createQueryFailedError = (errorMessage: string, errorCode: string) =>
-    new QueryFailedError(
-      errorMessage,
-      [],
-      Object.assign(new Error(errorMessage), { code: errorCode }),
-    );
 
   beforeEach(async () => {
     linksRepository = {

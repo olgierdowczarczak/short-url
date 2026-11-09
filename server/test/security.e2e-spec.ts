@@ -11,7 +11,7 @@ describe('Security (e2e)', () => {
 
   const allowedOrigin = 'http://localhost:5173';
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -22,7 +22,7 @@ describe('Security (e2e)', () => {
     await app.init();
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
   });
 

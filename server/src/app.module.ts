@@ -11,13 +11,14 @@ import {
 } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { type Env, envSchema } from './config/env.schema.js';
 import { buildTypeOrmOptions } from './config/typeorm.config.js';
 import { getEnvFilePaths } from './config/env-files.js';
+import { HealthModule } from './health/health.module.js';
+import { AuthModule } from './auth/auth.module.js';
 import { LinksModule } from './links/links.module.js';
 import { RedirectModule } from './redirect/redirect.module.js';
-import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { HealthModule } from './health/health.module.js';
 
 @Module({
   imports: [
@@ -46,12 +47,13 @@ import { HealthModule } from './health/health.module.js';
       }),
     }),
     HealthModule,
+    AuthModule,
     LinksModule,
     RedirectModule,
     RouterModule.register([
       {
         path: 'api',
-        children: [LinksModule],
+        children: [AuthModule, LinksModule],
       },
     ]),
   ],

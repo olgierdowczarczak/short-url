@@ -4,12 +4,13 @@ import { envSchema } from './env.schema.js';
 import { loadEnvFiles } from './env-files.js';
 import { buildTypeOrmOptions } from './typeorm.config.js';
 import { Link } from '../links/link.entity.js';
+import { User } from '../users/user.entity.js';
 
 loadEnvFiles();
 
 const env = envSchema.parse(process.env);
 export default new DataSource({
   ...buildTypeOrmOptions(env),
-  entities: [Link],
+  entities: [Link, User],
   migrations: [join(import.meta.dirname, '..', 'migrations', '*.js')],
 });

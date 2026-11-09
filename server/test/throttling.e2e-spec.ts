@@ -14,12 +14,11 @@ describe('Throttling (e2e)', () => {
   let linksRepository: Repository<Link>;
   let apiKey: string;
 
-  const modulePath = '/api/links';
   const createLimit = 10;
 
   const createLink = (key = apiKey) =>
     request(app.getHttpServer())
-      .post(modulePath)
+      .post('/api/links')
       .send({ url: 'https://example.com' })
       .set('x-api-key', key);
 
@@ -27,7 +26,7 @@ describe('Throttling (e2e)', () => {
     Promise.all(Array.from({ length: createLimit }).map(() => createLink(key)));
 
   const listLinks = () =>
-    request(app.getHttpServer()).get(modulePath).set('x-api-key', apiKey);
+    request(app.getHttpServer()).get('/api/links').set('x-api-key', apiKey);
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -49,7 +48,7 @@ describe('Throttling (e2e)', () => {
     await app.close();
   });
 
-  describe(`POST ${modulePath}`, () => {
+  describe('POST /api/links', () => {
     it('should return 429 when limit of 10 requests is exceeded', async () => {
       const responses = await createLinksUpToLimit();
       const blockedResponse = await createLink();
@@ -79,7 +78,7 @@ describe('Throttling (e2e)', () => {
     });
   });
 
-  describe(`GET ${modulePath}`, () => {
+  describe('GET /api/links', () => {
     it('should return 200 when POST is blocked', async () => {
       await createLinksUpToLimit();
       const blockedResponse = await createLink();
