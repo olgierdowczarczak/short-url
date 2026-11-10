@@ -14,6 +14,8 @@ export const envSchema = z.object({
   DB_NAME: z.string().nonempty(),
   DB_PORT: port,
   CORS_ORIGINS: z.string().nonempty(),
+  JWT_SECRET: z.string().min(32),
+  JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
 });
 
 export type Env = z.infer<typeof envSchema>;
