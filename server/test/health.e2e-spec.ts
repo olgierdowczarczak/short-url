@@ -21,7 +21,7 @@ describe('Health (e2e)', () => {
     await app.close();
   });
 
-  it('should return 200 when service is healthy', async () => {
+  it('should report healthy status without rate limiting when database is up', async () => {
     const response = await request(app.getHttpServer()).get('/health');
 
     expect(response.statusCode).toBe(HttpStatus.OK);
@@ -30,7 +30,7 @@ describe('Health (e2e)', () => {
     expect(response.body.info.database.status).toBe('up');
   });
 
-  it('should return 503 when service is unhealthy', async () => {
+  it('should return 503 when database is unavailable', async () => {
     await app.get(DataSource).destroy();
     const response = await request(app.getHttpServer()).get('/health');
 

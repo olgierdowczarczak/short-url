@@ -40,15 +40,11 @@ describe('LinksService', () => {
     service = module.get<LinksService>(LinksService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('create', () => {
     const url = 'https://example.com';
     const createdLink = buildLink({ url });
 
-    it('should create a new link', async () => {
+    it('should save a link with a generated 8-character code', async () => {
       const regexPattern = /^[A-Za-z0-9_-]{8}$/;
       linksRepository.save.mockResolvedValueOnce(createdLink);
 
@@ -73,7 +69,7 @@ describe('LinksService', () => {
       );
     });
 
-    it('should create a new link when duplication error appears', async () => {
+    it('should retry with a new code when the generated code collides', async () => {
       const duplicationError = createQueryFailedError(
         'duplicate key value violates unique constraint',
         '23505',
@@ -92,7 +88,7 @@ describe('LinksService', () => {
       expect(linksRepository.save).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw InternalServerErrorException after 3 collisions', async () => {
+    it('should throw InternalServerErrorException after 3 consecutive collisions', async () => {
       const maxAttempts = 3;
       const duplicationError = createQueryFailedError(
         'duplicate key value violates unique constraint',
@@ -121,7 +117,7 @@ describe('LinksService', () => {
       expect(linksRepository.save).toHaveBeenCalledOnce();
     });
 
-    it('should create a new link with alias', async () => {
+    it('should use the alias as the link code', async () => {
       const alias = 'my-alias';
       linksRepository.save.mockResolvedValueOnce(createdLink);
 
@@ -135,7 +131,7 @@ describe('LinksService', () => {
       expect(linksRepository.save).toHaveBeenCalledOnce();
     });
 
-    it('should throw ConflictException when alias is already taken', async () => {
+    it('should throw ConflictException without retrying when alias is already taken', async () => {
       const alias = 'my-alias';
       const duplicationError = createQueryFailedError(
         'duplicate key value violates unique constraint',
@@ -156,7 +152,7 @@ describe('LinksService', () => {
       expect(linksRepository.save).toHaveBeenCalledOnce();
     });
 
-    it('should rethrow other database errors when creating link with alias', async () => {
+    it('should rethrow other database errors when alias is provided', async () => {
       const alias = 'my-alias';
       const unexpectedError = createQueryFailedError(
         'not_null_violation',
@@ -178,7 +174,7 @@ describe('LinksService', () => {
   });
 
   describe('findAll', () => {
-    it('should return list with links', async () => {
+    it('should return links ordered from newest to oldest', async () => {
       linksRepository.find.mockResolvedValue(links);
 
       const result = await service.findAll();
@@ -187,15 +183,6 @@ describe('LinksService', () => {
       expect(linksRepository.find).toHaveBeenCalledExactlyOnceWith({
         order: { createdAt: 'DESC' },
       });
-    });
-
-    it('should return empty list when there are no links', async () => {
-      linksRepository.find.mockResolvedValue([]);
-
-      const result = await service.findAll();
-
-      expect(result).toStrictEqual([]);
-      expect(linksRepository.find).toHaveBeenCalledOnce();
     });
   });
 
@@ -238,7 +225,7 @@ describe('LinksService', () => {
       vi.useRealTimers();
     });
 
-    it('should increment clicks for existing link', async () => {
+    it('should increment clicks when link has no expiration date', async () => {
       const code = 'qwertyui';
       linksRepository.increment.mockResolvedValue(undefined);
       linksRepository.findOneBy.mockResolvedValue(links[0]);
@@ -288,6 +275,17 @@ describe('LinksService', () => {
         .catch((error) => error);
 
       expect(result).toBeInstanceOf(GoneException);
+      expect(linksRepository.increment).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException without counting a click when link does not exist', async () => {
+      linksRepository.findOneBy.mockResolvedValue(null);
+
+      const result = await service
+        .resolveRedirect('missing1')
+        .catch((error) => error);
+
+      expect(result).toBeInstanceOf(NotFoundException);
       expect(linksRepository.increment).not.toHaveBeenCalled();
     });
   });

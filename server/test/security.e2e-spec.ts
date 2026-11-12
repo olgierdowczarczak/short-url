@@ -27,7 +27,7 @@ describe('Security (e2e)', () => {
   });
 
   it.each(['/docs', '/health'])(
-    'should set helmet headers on %s',
+    'should set security headers on %s',
     async (path) => {
       const response = await request(app.getHttpServer()).get(path);
 
@@ -35,7 +35,7 @@ describe('Security (e2e)', () => {
     },
   );
 
-  it('should set access-control-allow-origin for allowed origin', async () => {
+  it('should allow CORS requests from a configured origin', async () => {
     const response = await request(app.getHttpServer())
       .get('/health')
       .set('Origin', allowedOrigin);
@@ -43,7 +43,7 @@ describe('Security (e2e)', () => {
     expect(response.headers['access-control-allow-origin']).toBe(allowedOrigin);
   });
 
-  it('should not set access-control-allow-origin for unknown origin', async () => {
+  it('should not allow CORS requests from an unknown origin', async () => {
     const response = await request(app.getHttpServer())
       .get('/health')
       .set('Origin', 'https://evil.example');
@@ -51,7 +51,7 @@ describe('Security (e2e)', () => {
     expect(response.headers).not.toHaveProperty('access-control-allow-origin');
   });
 
-  it('should allow x-api-key header in preflight request', async () => {
+  it('should allow the x-api-key header in a CORS preflight request', async () => {
     const response = await request(app.getHttpServer())
       .options('/api/links')
       .set('Origin', allowedOrigin)

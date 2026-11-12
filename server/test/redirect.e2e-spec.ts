@@ -56,7 +56,7 @@ describe('Redirect (e2e)', () => {
       expect(response.headers.location).toBe(existingLink.url);
     });
 
-    it('should return 404 when link with provided code does not exist', async () => {
+    it('should return 404 when link does not exist', async () => {
       const code = 'qwertyop';
 
       const response = await request(app.getHttpServer()).get(`/${code}`);
@@ -65,7 +65,7 @@ describe('Redirect (e2e)', () => {
       expect(response.body.message).toBe(`Link with code ${code} not found`);
     });
 
-    it('should increment click count after redirect', async () => {
+    it('should increment the click count on redirect', async () => {
       const existingLink = buildLink({ clicks: 5 });
       const counterAfterIncrement = existingLink.clicks + 1;
       await linksRepository.insert(existingLink);
@@ -81,7 +81,7 @@ describe('Redirect (e2e)', () => {
       expect(updatedLink?.clicks).toBe(counterAfterIncrement);
     });
 
-    it('should count every click when link is visited concurrently', async () => {
+    it('should count every click under concurrent visits', async () => {
       const existingLink = buildLink({ clicks: 5 });
       const numberOfVisitors = 10;
       const counterAfterIncrement = existingLink.clicks + numberOfVisitors;
@@ -102,7 +102,7 @@ describe('Redirect (e2e)', () => {
       expect(updatedLink?.clicks).toBe(counterAfterIncrement);
     });
 
-    it('should return 410 and not count a click when link is expired', async () => {
+    it('should return 410 without counting a click when link has expired', async () => {
       const existingLink = buildLink({
         expiresAt: new Date('2000-01-01T00:00:00.000Z'),
       });
@@ -119,7 +119,7 @@ describe('Redirect (e2e)', () => {
       expect(updatedLink?.clicks).toBe(existingLink.clicks);
     });
 
-    it('should redirect to url when link was created with alias', async () => {
+    it('should redirect using a custom alias', async () => {
       const url = 'https://example.com';
       const alias = 'my-alias';
 

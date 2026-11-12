@@ -34,7 +34,7 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
-    it('should create user with hashed password', async () => {
+    it('should hash the password with argon2 before creating the user', async () => {
       const createdUser = { id: 1, email } as User;
       usersService.create.mockResolvedValueOnce(createdUser);
 
@@ -61,7 +61,7 @@ describe('AuthService', () => {
       };
     });
 
-    it('should return access token when credentials are correct', async () => {
+    it('should sign an access token with user id and email when credentials are valid', async () => {
       usersService.findByEmail.mockResolvedValueOnce(user);
       jwtService.signAsync.mockResolvedValueOnce('signed-token');
 
@@ -87,7 +87,7 @@ describe('AuthService', () => {
       expect(jwtService.signAsync).not.toHaveBeenCalled();
     });
 
-    it('should throw UnauthorizedException when password is wrong', async () => {
+    it('should throw UnauthorizedException when password is invalid', async () => {
       usersService.findByEmail.mockResolvedValueOnce(user);
 
       const result = await service

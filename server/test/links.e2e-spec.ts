@@ -44,7 +44,7 @@ describe('Links (e2e)', () => {
   });
 
   describe('GET /api/links', () => {
-    it('should return an empty list when there are no links', async () => {
+    it('should return an empty list when no links exist', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/links')
         .set('x-api-key', apiKey);
@@ -90,7 +90,7 @@ describe('Links (e2e)', () => {
   });
 
   describe('POST /api/links', () => {
-    it('should create a link', async () => {
+    it('should create a link with a generated code', async () => {
       const url = 'https://example.com';
 
       const response = await request(app.getHttpServer())
@@ -112,7 +112,7 @@ describe('Links (e2e)', () => {
       expect(savedLink?.url).toBe(url);
     });
 
-    it('should create a new code for an already shortened url', async () => {
+    it('should generate a new code when the url is already shortened', async () => {
       const existingLink = buildLink();
       await linksRepository.insert(existingLink);
 
@@ -128,11 +128,11 @@ describe('Links (e2e)', () => {
     });
 
     it.each([
-      ['url is not provided', {}],
-      ['url is not valid', { url: 'example1' }],
-      ['url contains unallowed protocol', { url: 'ftp://example1.com' }],
+      ['url is missing', {}],
+      ['url is invalid', { url: 'example1' }],
+      ['url uses a disallowed protocol', { url: 'ftp://example1.com' }],
       [
-        'request contains additional fields',
+        'body contains unknown fields',
         { url: 'https://example.com', foo: 'bar' },
       ],
       [
@@ -155,7 +155,7 @@ describe('Links (e2e)', () => {
     });
 
     it.each([
-      ['expiresAt in future', '3000-01-01T00:00:00.000Z'],
+      ['expiresAt is in the future', '3000-01-01T00:00:00.000Z'],
       ['expiresAt is null', null],
     ])('should create a link when %s', async (_, expiresAt) => {
       const url = 'https://example.com';
@@ -173,7 +173,7 @@ describe('Links (e2e)', () => {
       expect(savedLink?.expiresAt?.toISOString() ?? null).toBe(expiresAt);
     });
 
-    it('should create a link when alias is provided', async () => {
+    it('should use the provided alias as the link code', async () => {
       const url = 'https://example.com';
       const alias = 'my-alias';
 
@@ -196,7 +196,7 @@ describe('Links (e2e)', () => {
       expect(savedLink?.code).toBe(alias);
     });
 
-    it('should return 409 when link with provided alias already exists', async () => {
+    it('should return 409 when alias is already taken', async () => {
       const url = 'https://example.com';
       const alias = 'my-alias';
       const existingLink = buildLink({ url, code: alias });
@@ -212,7 +212,7 @@ describe('Links (e2e)', () => {
       expect(linksCount).toBe(1);
     });
 
-    it('should return 409 when attempting to create multiple links with the same alias', async () => {
+    it('should create only one link when the same alias is requested concurrently', async () => {
       const url = 'https://example.com';
       const alias = 'my-alias';
       const createRequest = () =>
@@ -231,18 +231,12 @@ describe('Links (e2e)', () => {
     });
 
     it.each<[string, unknown]>([
-      ['is too short', 'ab'],
-      ['is too long', 'a'.repeat(33)],
+      ['is shorter than 3 characters', 'ab'],
+      ['is longer than 32 characters', 'a'.repeat(33)],
       ['is not a string', 123],
       ['contains invalid characters', '!@#$%^&*()'],
-      ['is restricted', 'api'],
-      ['is restricted', 'API'],
-      ['is restricted', 'docs'],
-      ['is restricted', 'DOCS'],
-      ['is restricted', 'docs-json'],
-      ['is restricted', 'docs-yaml'],
-      ['is restricted', 'health'],
-      ['is restricted', 'HEALTH'],
+      ['is a reserved word', 'api'],
+      ['is a reserved word in different casing', 'HEALTH'],
     ])('should return 400 when alias %s', async (_, alias) => {
       const url = 'https://example.com';
 
@@ -252,11 +246,12 @@ describe('Links (e2e)', () => {
         .set('x-api-key', apiKey);
 
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
+      expect(await linksRepository.count()).toBe(0);
     });
   });
 
   describe('GET /api/links/:code', () => {
-    it('should return link when link with provided code exists', async () => {
+    it('should return the link with the given code', async () => {
       const existingLink = buildLink();
       await linksRepository.insert(existingLink);
 
@@ -274,7 +269,7 @@ describe('Links (e2e)', () => {
       });
     });
 
-    it('should return link when link with provided code exists and is expired', async () => {
+    it('should return the link even when it has expired', async () => {
       const expiresAt = new Date('2000-01-01T00:00:00Z');
       const existingLink = buildLink({ expiresAt });
       await linksRepository.insert(existingLink);
@@ -293,7 +288,7 @@ describe('Links (e2e)', () => {
       });
     });
 
-    it('should return 404 when link with provided code does not exist', async () => {
+    it('should return 404 when link does not exist', async () => {
       const code = 'qwertyop';
 
       const response = await request(app.getHttpServer())
@@ -304,7 +299,7 @@ describe('Links (e2e)', () => {
       expect(response.body.message).toBe(`Link with code ${code} not found`);
     });
 
-    it('should not modify the click count when retrieving a link', async () => {
+    it('should not count a click when reading link details', async () => {
       const existingLink = buildLink();
       await linksRepository.insert(existingLink);
       const counterBeforeIncrement = existingLink.clicks;
@@ -330,7 +325,7 @@ describe('Links (e2e)', () => {
     const wrongKey = 'b'.repeat(32);
 
     endpoints(
-      'should return 401 for %s %s without api key',
+      'should return 401 for %s %s when api key is missing',
       async (method, path) => {
         const response = await request(app.getHttpServer())[method](path);
 
@@ -340,7 +335,7 @@ describe('Links (e2e)', () => {
     );
 
     endpoints(
-      'should return 401 for %s %s with wrong api key',
+      'should return 401 for %s %s when api key is invalid',
       async (method, path) => {
         const response = await request(app.getHttpServer())
           [method](path)

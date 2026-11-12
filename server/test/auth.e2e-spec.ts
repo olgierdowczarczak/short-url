@@ -41,7 +41,7 @@ describe('Auth (e2e)', () => {
   });
 
   describe('register', () => {
-    it('should return 201 when register correct', async () => {
+    it('should register a user and return it without the password hash', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/register')
         .send({ email, password });
@@ -55,7 +55,7 @@ describe('Auth (e2e)', () => {
       expect(await usersRepository.count()).toBe(1);
     });
 
-    it('should return 201 when register correct and email includes uppercase character', async () => {
+    it('should store email in lowercase', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/register')
         .send({ email: 'Test@test.com', password });
@@ -71,7 +71,7 @@ describe('Auth (e2e)', () => {
       expect(users[0].email).toBe(email);
     });
 
-    it('should encrypt password after registration', async () => {
+    it('should store the password as an argon2 hash', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/register')
         .send({ email, password });
@@ -95,7 +95,7 @@ describe('Auth (e2e)', () => {
       expect(response.statusCode).toBe(HttpStatus.CONFLICT);
     });
 
-    it('should return 409 when email including uppercase character is already taken', async () => {
+    it('should return 409 when email is already taken with different casing', async () => {
       await usersRepository.insert({
         email,
         passwordHash,
@@ -108,7 +108,7 @@ describe('Auth (e2e)', () => {
       expect(response.statusCode).toBe(HttpStatus.CONFLICT);
     });
 
-    it('should handle two parallel requests', async () => {
+    it('should create only one user when the same email is registered concurrently', async () => {
       const createRequest = () =>
         request(app.getHttpServer())
           .post('/api/auth/register')
@@ -124,17 +124,26 @@ describe('Auth (e2e)', () => {
     });
 
     it.each([
+      ['email is missing', { password }],
       ['email is not a string', { email: 123, password }],
-      ['email is not a email', { email: 'aaa', password }],
+      ['email is invalid', { email: 'aaa', password }],
+      ['password is missing', { email }],
       ['password is not a string', { email, password: 123 }],
-      ['password is empty', { email, password: '' }],
-      ['password is too long', { email, password: 'a'.repeat(129) }],
+      [
+        'password is shorter than 8 characters',
+        { email, password: 'a'.repeat(7) },
+      ],
+      [
+        'password is longer than 128 characters',
+        { email, password: 'a'.repeat(129) },
+      ],
     ])('should return 400 when %s', async (_, body) => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/register')
         .send(body);
 
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
+      expect(await usersRepository.count()).toBe(0);
     });
   });
 
@@ -145,7 +154,7 @@ describe('Auth (e2e)', () => {
         .send({ email, password });
     });
 
-    it('should return 200 when login correct', async () => {
+    it('should return an access token when credentials are valid', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/login')
         .send({ email, password });
@@ -156,7 +165,7 @@ describe('Auth (e2e)', () => {
       });
     });
 
-    it('should return 200 when login correct and email includes uppercase character', async () => {
+    it('should treat email as case-insensitive', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/login')
         .send({ email: 'Test@test.com', password });
@@ -167,7 +176,7 @@ describe('Auth (e2e)', () => {
       });
     });
 
-    it('should return 401 when email is wrong', async () => {
+    it('should return 401 when user does not exist', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/login')
         .send({ email: 'wrongemail@test.com', password });
@@ -175,7 +184,7 @@ describe('Auth (e2e)', () => {
       expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
     });
 
-    it('should return 401 when password is wrong', async () => {
+    it('should return 401 when password is invalid', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/login')
         .send({ email, password: 'wrong_password' });
@@ -183,7 +192,7 @@ describe('Auth (e2e)', () => {
       expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
     });
 
-    it('should return the same response for wrong email and wrong password', async () => {
+    it('should not reveal whether the email is registered', async () => {
       const wrongEmailResponse = await request(app.getHttpServer())
         .post('/api/auth/login')
         .send({ email: 'wrongemail@test.com', password });
@@ -197,10 +206,13 @@ describe('Auth (e2e)', () => {
 
     it.each([
       ['email is not a string', { email: 123, password }],
-      ['email is not a email', { email: 'aaa', password }],
+      ['email is invalid', { email: 'aaa', password }],
       ['password is not a string', { email, password: 123 }],
       ['password is empty', { email, password: '' }],
-      ['password is too long', { email, password: 'a'.repeat(129) }],
+      [
+        'password is longer than 128 characters',
+        { email, password: 'a'.repeat(129) },
+      ],
     ])('should return 400 when %s', async (_, body) => {
       const response = await request(app.getHttpServer())
         .post('/api/auth/login')
@@ -209,7 +221,7 @@ describe('Auth (e2e)', () => {
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
     });
 
-    it('should verify access token when correct login', async () => {
+    it('should issue a JWT with user id, email and configured lifetime', async () => {
       const existingUser = await usersRepository.findOneBy({ email });
       const response = await request(app.getHttpServer())
         .post('/api/auth/login')

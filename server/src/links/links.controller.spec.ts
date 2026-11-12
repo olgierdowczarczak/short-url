@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { LinksController } from './links.controller.js';
 import { LinksService } from './links.service.js';
 import { CreateLinkDto } from './dto/create-link.dto.js';
@@ -32,15 +31,11 @@ describe('LinksController', () => {
     controller = module.get<LinksController>(LinksController);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
   describe('create', () => {
     const url = 'https://example.com';
     const createdLink = buildLink({ url });
 
-    it('should pass url from dto to service and return created link', async () => {
+    it('should delegate to LinksService.create and return the created link', async () => {
       const dto: CreateLinkDto = { url };
       linksService.create.mockResolvedValue(createdLink);
 
@@ -52,7 +47,7 @@ describe('LinksController', () => {
   });
 
   describe('findAll', () => {
-    it('should return link list', async () => {
+    it('should return all links from LinksService', async () => {
       linksService.findAll.mockResolvedValue(links);
 
       const result = await controller.findAll();
@@ -63,26 +58,13 @@ describe('LinksController', () => {
   });
 
   describe('findOne', () => {
-    it('should return searched link', async () => {
+    it('should return the link with the given code', async () => {
       const code = 'qwertyui';
       linksService.findByCode.mockResolvedValue(links[0]);
 
       const result = await controller.findOne(code);
 
       expect(result).toBe(links[0]);
-      expect(linksService.findByCode).toHaveBeenCalledExactlyOnceWith(code);
-    });
-
-    it('should propagate NotFoundException from service', async () => {
-      const code = 'notfound';
-      const notFoundError = new NotFoundException(
-        `Link with code ${code} not found`,
-      );
-      linksService.findByCode.mockRejectedValue(notFoundError);
-
-      const result = await controller.findOne(code).catch((error) => error);
-
-      expect(result).toBe(notFoundError);
       expect(linksService.findByCode).toHaveBeenCalledExactlyOnceWith(code);
     });
   });

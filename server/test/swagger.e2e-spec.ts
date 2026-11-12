@@ -23,7 +23,7 @@ describe('Swagger (e2e)', () => {
   });
 
   describe('GET /docs', () => {
-    it('should return 200', async () => {
+    it('should serve Swagger UI', async () => {
       const response = await request(app.getHttpServer()).get('/docs');
 
       expect(response.statusCode).toBe(HttpStatus.OK);
@@ -31,10 +31,13 @@ describe('Swagger (e2e)', () => {
   });
 
   describe('GET /docs-json', () => {
-    it('should return OpenAPI document', async () => {
+    it('should expose OpenAPI document with all routes and security schemes', async () => {
       const response = await request(app.getHttpServer()).get('/docs-json');
 
       expect(response.statusCode).toBe(HttpStatus.OK);
+      expect(response.body.paths).toHaveProperty('/api/auth/register');
+      expect(response.body.paths).toHaveProperty('/api/auth/login');
+      expect(response.body.paths).toHaveProperty('/health');
       expect(response.body.paths).toHaveProperty('/api/links');
       expect(response.body.paths).toHaveProperty('/api/links/{code}');
       expect(response.body.paths).toHaveProperty('/{code}');

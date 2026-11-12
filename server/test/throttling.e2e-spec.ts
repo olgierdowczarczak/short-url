@@ -49,7 +49,7 @@ describe('Throttling (e2e)', () => {
   });
 
   describe('POST /api/links', () => {
-    it('should return 429 when limit of 10 requests is exceeded', async () => {
+    it('should return 429 with retry-after once 10 requests per minute are exceeded', async () => {
       const responses = await createLinksUpToLimit();
       const blockedResponse = await createLink();
 
@@ -64,7 +64,7 @@ describe('Throttling (e2e)', () => {
       expect(await linksRepository.count()).toBe(createLimit);
     });
 
-    it('should return 429 instead of 401 when limit is exceeded with wrong api key', async () => {
+    it('should apply rate limiting before authentication', async () => {
       const wrongKey = 'wrong-key';
 
       const responses = await createLinksUpToLimit(wrongKey);
@@ -79,7 +79,7 @@ describe('Throttling (e2e)', () => {
   });
 
   describe('GET /api/links', () => {
-    it('should return 200 when POST is blocked', async () => {
+    it('should track limits per route and keep GET available when POST is limited', async () => {
       await createLinksUpToLimit();
       const blockedResponse = await createLink();
 

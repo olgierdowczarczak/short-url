@@ -26,11 +26,7 @@ describe('ApiKeyGuard', () => {
     );
   });
 
-  it('should be defined', () => {
-    expect(guard).toBeDefined();
-  });
-
-  it('should return true when api key is correct', () => {
+  it('should allow the request when api key matches', () => {
     const context = createContext({ 'x-api-key': API_KEY });
 
     const result = guard.canActivate(context);
@@ -38,25 +34,25 @@ describe('ApiKeyGuard', () => {
     expect(result).toBe(true);
   });
 
-  it('should throw UnauthorizedException when header is not provided', () => {
+  it('should throw UnauthorizedException when header is missing', () => {
     const context = createContext({});
 
     expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
   });
 
-  it('should throw UnauthorizedException when header has different length', () => {
+  it('should throw UnauthorizedException when api key length differs', () => {
     const context = createContext({ 'x-api-key': 'b'.repeat(16) });
 
     expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
   });
 
-  it('should throw UnauthorizedException when header is incorrect', () => {
+  it('should throw UnauthorizedException when api key does not match', () => {
     const context = createContext({ 'x-api-key': 'b'.repeat(32) });
 
     expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
   });
 
-  it('should throw UnauthorizedException when header type is incorrect', () => {
+  it('should throw UnauthorizedException when header is sent multiple times', () => {
     const context = createContext({ 'x-api-key': ['b'.repeat(32)] });
 
     expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);

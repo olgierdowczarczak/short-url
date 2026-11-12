@@ -1,7 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/user.entity.js';
+import { User } from './user.entity.js';
 import { isUniqueViolation } from '../utils/is-unique-violation.js';
 
 @Injectable()

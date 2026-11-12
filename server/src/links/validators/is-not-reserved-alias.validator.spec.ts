@@ -14,7 +14,7 @@ const validateAlias = (alias: unknown) => {
 
 describe('IsNotReservedAlias', () => {
   it.each(['api', 'docs', 'docs-json', 'docs-yaml', 'health', 'HEALTH', 'Api'])(
-    'alias should not pass using %s',
+    'should reject reserved alias "%s"',
     (alias) => {
       const errors = validateAlias(alias);
 
@@ -25,8 +25,14 @@ describe('IsNotReservedAlias', () => {
     },
   );
 
-  it.each(['my-alias', 'apis', 123])('alias should pass using %s', (alias) => {
+  it.each(['my-alias', 'apis'])('should accept alias "%s"', (alias) => {
     const errors = validateAlias(alias);
+
+    expect(errors).toHaveLength(0);
+  });
+
+  it('should skip non-string values and leave type checks to other validators', () => {
+    const errors = validateAlias(123);
 
     expect(errors).toHaveLength(0);
   });

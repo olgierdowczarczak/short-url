@@ -40,7 +40,7 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should save a new user', async () => {
+    it('should save a user with the given email and password hash', async () => {
       usersRepository.save.mockResolvedValueOnce(savedUser);
 
       const result = await service.create(email, passwordHash);
@@ -85,7 +85,7 @@ describe('UsersService', () => {
   });
 
   describe('findByEmail', () => {
-    it('should return user when it exists', async () => {
+    it('should return the user when email exists', async () => {
       usersRepository.findOneBy.mockResolvedValueOnce(savedUser);
 
       const result = await service.findByEmail(email);
@@ -96,7 +96,7 @@ describe('UsersService', () => {
       });
     });
 
-    it('should return null when user does not exist', async () => {
+    it('should return null when email does not exist', async () => {
       usersRepository.findOneBy.mockResolvedValueOnce(null);
 
       const result = await service.findByEmail(email);

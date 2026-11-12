@@ -46,6 +46,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: minutes(1) } })
   @ApiOperation({ summary: 'Login' })
   @ApiOkResponse({ type: LoginResponseDto })
+  @ApiBadRequestResponse({ description: 'Invalid request body' })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
   login(@Body() body: LoginDto) {
     return this.authService.login(body);
