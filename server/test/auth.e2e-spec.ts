@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { Repository } from 'typeorm';
@@ -126,7 +127,7 @@ describe('Auth (e2e)', () => {
       ['email is not a string', { email: 123, password }],
       ['email is not a email', { email: 'aaa', password }],
       ['password is not a string', { email, password: 123 }],
-      ['password is too short', { email, password: 'qwerty' }],
+      ['password is empty', { email, password: '' }],
       ['password is too long', { email, password: 'a'.repeat(129) }],
     ])('should return 400 when %s', async (_, body) => {
       const response = await request(app.getHttpServer())
@@ -182,11 +183,23 @@ describe('Auth (e2e)', () => {
       expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
     });
 
+    it('should return the same response for wrong email and wrong password', async () => {
+      const wrongEmailResponse = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'wrongemail@test.com', password });
+      const wrongPasswordResponse = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email, password: 'wrong_password' });
+
+      expect(wrongEmailResponse.statusCode).toBe(HttpStatus.UNAUTHORIZED);
+      expect(wrongEmailResponse.body).toEqual(wrongPasswordResponse.body);
+    });
+
     it.each([
       ['email is not a string', { email: 123, password }],
       ['email is not a email', { email: 'aaa', password }],
       ['password is not a string', { email, password: 123 }],
-      ['password is too short', { email, password: 'qwerty' }],
+      ['password is empty', { email, password: '' }],
       ['password is too long', { email, password: 'a'.repeat(129) }],
     ])('should return 400 when %s', async (_, body) => {
       const response = await request(app.getHttpServer())
@@ -194,6 +207,21 @@ describe('Auth (e2e)', () => {
         .send(body);
 
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
+    });
+
+    it('should verify access token when correct login', async () => {
+      const existingUser = await usersRepository.findOneBy({ email });
+      const response = await request(app.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email, password });
+
+      const payload = app.get(JwtService).verify(response.body.accessToken);
+
+      expect(payload).toMatchObject({
+        sub: existingUser!.id,
+        email,
+      });
+      expect(payload.exp - payload.iat).toBe(3600);
     });
   });
 });
