@@ -10,6 +10,7 @@ import { User } from '../users/user.entity.js';
 import { UsersService } from '../users/users.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { JwtPayload } from './types/jwt-payload.js';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -38,7 +39,7 @@ export class AuthService implements OnModuleInit {
     if (!isPasswordCorrect) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const accessToken = await this.jwtService.signAsync({
+    const accessToken = await this.jwtService.signAsync<JwtPayload>({
       sub: user.id,
       email: user.email,
     });

@@ -21,5 +21,6 @@ import { Env } from '../config/env.schema.js';
   ],
   controllers: [AuthController],
   providers: [AuthService],
+  exports: [JwtModule],
 })
 export class AuthModule {}

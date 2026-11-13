@@ -22,7 +22,9 @@ import { UserResponseDto } from './dto/user-response.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { LoginResponseDto } from './dto/login-response.dto.js';
+import { Public } from '../common/decorators/public.decorator.js';
 
+@Public()
 @ApiTags('Auth')
 @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded' })
 @Controller('auth')

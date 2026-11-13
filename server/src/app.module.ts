@@ -19,6 +19,7 @@ import { HealthModule } from './health/health.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { LinksModule } from './links/links.module.js';
 import { RedirectModule } from './redirect/redirect.module.js';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard.js';
 
 @Module({
   imports: [
@@ -75,6 +76,10 @@ import { RedirectModule } from './redirect/redirect.module.js';
     {
       provide: APP_GUARD,
       useExisting: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

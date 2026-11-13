@@ -11,7 +11,9 @@ import {
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
+import { Public } from '../common/decorators/public.decorator.js';
 
+@Public()
 @ApiTags('Health')
 @SkipThrottle()
 @Controller('health')

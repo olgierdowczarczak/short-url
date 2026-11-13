@@ -15,7 +15,9 @@ import {
   ApiTags,
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
+import { Public } from '../common/decorators/public.decorator.js';
 
+@Public()
 @ApiTags('Redirect')
 @Controller()
 export class RedirectController {
