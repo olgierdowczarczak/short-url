@@ -1,20 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { Repository } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { Link } from '../src/links/link.entity.js';
+import { User } from '../src/users/user.entity.js';
 import { buildLink } from '../src/links/testing/link.fixtures.js';
-import type { Env } from '../src/config/env.schema.js';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { getAccessToken } from './helpers/auth.js';
 
 describe('Redirect (e2e)', () => {
   let app: INestApplication<App>;
   let linksRepository: Repository<Link>;
-  let apiKey: string;
+  let usersRepository: Repository<User>;
+  let bearerToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -28,13 +29,13 @@ describe('Redirect (e2e)', () => {
     await app.listen(0);
 
     linksRepository = app.get(getRepositoryToken(Link));
-    apiKey = app
-      .get<ConfigService<Env, true>>(ConfigService)
-      .get('API_KEY', { infer: true });
+    usersRepository = app.get(getRepositoryToken(User));
   });
 
   beforeEach(async () => {
     await linksRepository.clear();
+    await usersRepository.clear();
+    bearerToken = await getAccessToken(app);
   });
 
   afterAll(async () => {
@@ -126,7 +127,7 @@ describe('Redirect (e2e)', () => {
       const createResponse = await request(app.getHttpServer())
         .post('/api/links')
         .send({ url, alias })
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
       const redirectResponse = await request(app.getHttpServer()).get(
         `/${alias}`,
       );

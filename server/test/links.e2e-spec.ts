@@ -1,22 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { Repository } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { Link } from '../src/links/link.entity.js';
+import { User } from '../src/users/user.entity.js';
 import { buildLink } from '../src/links/testing/link.fixtures.js';
-import type { Env } from '../src/config/env.schema.js';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import type { Env } from '../src/config/env.schema.js';
+import { getAccessToken } from './helpers/auth.js';
 
 const CODE_PATTERN = /^[A-Za-z0-9_-]{8}$/;
 
 describe('Links (e2e)', () => {
   let app: INestApplication<App>;
   let linksRepository: Repository<Link>;
-  let apiKey: string;
+  let usersRepository: Repository<User>;
+  let bearerToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -30,13 +34,13 @@ describe('Links (e2e)', () => {
     await app.init();
 
     linksRepository = app.get(getRepositoryToken(Link));
-    apiKey = app
-      .get<ConfigService<Env, true>>(ConfigService)
-      .get('API_KEY', { infer: true });
+    usersRepository = app.get(getRepositoryToken(User));
   });
 
   beforeEach(async () => {
     await linksRepository.clear();
+    await usersRepository.clear();
+    bearerToken = await getAccessToken(app);
   });
 
   afterAll(async () => {
@@ -47,7 +51,7 @@ describe('Links (e2e)', () => {
     it('should return an empty list when no links exist', async () => {
       const response = await request(app.getHttpServer())
         .get('/api/links')
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toEqual([]);
@@ -68,7 +72,7 @@ describe('Links (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get('/api/links')
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toHaveLength(2);
@@ -96,7 +100,7 @@ describe('Links (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/links')
         .send({ url })
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.CREATED);
       expect(response.body).toEqual({
@@ -119,7 +123,7 @@ describe('Links (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/links')
         .send({ url: existingLink.url })
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.CREATED);
       expect(response.body.code).toMatch(CODE_PATTERN);
@@ -148,7 +152,7 @@ describe('Links (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/links')
         .send(payload)
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
       expect(await linksRepository.count()).toBe(0);
@@ -163,7 +167,7 @@ describe('Links (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/links')
         .send({ url, expiresAt })
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.CREATED);
       expect(response.body.expiresAt).toEqual(expiresAt);
@@ -180,7 +184,7 @@ describe('Links (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/links')
         .send({ url, alias })
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.CREATED);
       expect(response.body).toEqual({
@@ -205,7 +209,7 @@ describe('Links (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/links')
         .send({ url, alias })
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.CONFLICT);
       const linksCount = await linksRepository.count();
@@ -219,7 +223,7 @@ describe('Links (e2e)', () => {
         request(app.getHttpServer())
           .post('/api/links')
           .send({ url, alias })
-          .set('x-api-key', apiKey);
+          .set('Authorization', `Bearer ${bearerToken}`);
 
       const requests = await Promise.all([createRequest(), createRequest()]);
 
@@ -243,7 +247,7 @@ describe('Links (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/api/links')
         .send({ url, alias })
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
       expect(await linksRepository.count()).toBe(0);
@@ -257,7 +261,7 @@ describe('Links (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/api/links/${existingLink.code}`)
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toEqual({
@@ -276,7 +280,7 @@ describe('Links (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/api/links/${existingLink.code}`)
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       expect(response.body).toEqual({
@@ -293,7 +297,7 @@ describe('Links (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/api/links/${code}`)
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
       expect(response.body.message).toBe(`Link with code ${code} not found`);
@@ -306,7 +310,7 @@ describe('Links (e2e)', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/api/links/${existingLink.code}`)
-        .set('x-api-key', apiKey);
+        .set('Authorization', `Bearer ${bearerToken}`);
 
       expect(response.statusCode).toBe(HttpStatus.OK);
       const updatedLink = await linksRepository.findOneBy({
@@ -317,34 +321,55 @@ describe('Links (e2e)', () => {
   });
 
   describe('Authorization', () => {
-    const endpoints = it.each([
+    const endpoints = [
       ['get', '/api/links'],
       ['post', '/api/links'],
       ['get', '/api/links/somecode'],
-    ] as const);
-    const wrongKey = 'b'.repeat(32);
+    ] as const;
 
-    endpoints(
-      'should return 401 for %s %s when api key is missing',
-      async (method, path) => {
-        const response = await request(app.getHttpServer())[method](path);
+    const signToken = (secret: string, exp?: number) =>
+      new JwtService({ secret }).sign({
+        sub: 1,
+        email: 'test@test.com',
+        ...(exp !== undefined && { exp }),
+      });
 
-        expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
-        expect(response.body.message).toBe('Unauthorized');
-      },
-    );
+    const getJwtSecret = () =>
+      app
+        .get<ConfigService<Env, true>>(ConfigService)
+        .get('JWT_SECRET', { infer: true });
 
-    endpoints(
-      'should return 401 for %s %s when api key is invalid',
-      async (method, path) => {
-        const response = await request(app.getHttpServer())
-          [method](path)
-          .set('x-api-key', wrongKey);
+    const invalidAuthorizations: [string, () => string | undefined][] = [
+      ['authorization header is missing', () => undefined],
+      ['scheme is not Bearer', () => `Basic ${bearerToken}`],
+      ['token is malformed', () => 'Bearer not-a-jwt'],
+      [
+        'token is signed with a different secret',
+        () => `Bearer ${signToken('x'.repeat(32))}`,
+      ],
+      [
+        'token has expired',
+        () =>
+          `Bearer ${signToken(getJwtSecret(), Math.floor(Date.now() / 1000) - 10)}`,
+      ],
+    ];
 
-        expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
-        expect(response.body.message).toBe('Unauthorized');
-      },
-    );
+    describe.each(endpoints)('%s %s', (method, path) => {
+      it.each(invalidAuthorizations)(
+        'should return 401 when %s',
+        async (_, buildAuthorization) => {
+          const authorization = buildAuthorization();
+          const pendingRequest = request(app.getHttpServer())[method](path);
+
+          const response = await (authorization
+            ? pendingRequest.set('Authorization', authorization)
+            : pendingRequest);
+
+          expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
+          expect(await linksRepository.count()).toBe(0);
+        },
+      );
+    });
   });
 
   describe('API prefix', () => {
@@ -359,7 +384,7 @@ describe('Links (e2e)', () => {
       async (method, path) => {
         const response = await request(app.getHttpServer())
           [method](path)
-          .set('x-api-key', apiKey);
+          .set('Authorization', `Bearer ${bearerToken}`);
 
         expect(response.statusCode).toBe(HttpStatus.NOT_FOUND);
       },

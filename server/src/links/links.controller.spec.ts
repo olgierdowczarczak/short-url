@@ -3,7 +3,6 @@ import { LinksController } from './links.controller.js';
 import { LinksService } from './links.service.js';
 import { CreateLinkDto } from './dto/create-link.dto.js';
 import { buildLink, links } from './testing/link.fixtures.js';
-import { ApiKeyGuard } from '../common/guards/api-key.guard.js';
 
 describe('LinksController', () => {
   let controller: LinksController;
@@ -23,10 +22,7 @@ describe('LinksController', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [{ provide: LinksService, useValue: linksService }],
       controllers: [LinksController],
-    })
-      .overrideGuard(ApiKeyGuard)
-      .useValue({ canActivate: () => true })
-      .compile();
+    }).compile();
 
     controller = module.get<LinksController>(LinksController);
   });

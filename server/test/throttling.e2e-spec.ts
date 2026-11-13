@@ -1,32 +1,37 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, HttpStatus } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { Repository } from 'typeorm';
 import { AppModule } from '../src/app.module.js';
 import { Link } from '../src/links/link.entity.js';
-import type { Env } from '../src/config/env.schema.js';
+import { User } from '../src/users/user.entity.js';
+import { getAccessToken } from './helpers/auth.js';
 
 describe('Throttling (e2e)', () => {
   let app: INestApplication<App>;
   let linksRepository: Repository<Link>;
-  let apiKey: string;
+  let usersRepository: Repository<User>;
+  let bearerToken: string;
 
   const createLimit = 10;
 
-  const createLink = (key = apiKey) =>
+  const createLink = (token: string = bearerToken) =>
     request(app.getHttpServer())
       .post('/api/links')
       .send({ url: 'https://example.com' })
-      .set('x-api-key', key);
+      .set('Authorization', `Bearer ${token}`);
 
-  const createLinksUpToLimit = (key = apiKey) =>
-    Promise.all(Array.from({ length: createLimit }).map(() => createLink(key)));
+  const createLinksUpToLimit = (token: string) =>
+    Promise.all(
+      Array.from({ length: createLimit }).map(() => createLink(token)),
+    );
 
-  const listLinks = () =>
-    request(app.getHttpServer()).get('/api/links').set('x-api-key', apiKey);
+  const listLinks = (token: string) =>
+    request(app.getHttpServer())
+      .get('/api/links')
+      .set('Authorization', `Bearer ${token}`);
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -37,11 +42,11 @@ describe('Throttling (e2e)', () => {
     await app.listen(0);
 
     linksRepository = app.get(getRepositoryToken(Link));
-    apiKey = app
-      .get<ConfigService<Env, true>>(ConfigService)
-      .get('API_KEY', { infer: true });
+    usersRepository = app.get(getRepositoryToken(User));
 
     await linksRepository.clear();
+    await usersRepository.clear();
+    bearerToken = await getAccessToken(app);
   });
 
   afterEach(async () => {
@@ -50,7 +55,7 @@ describe('Throttling (e2e)', () => {
 
   describe('POST /api/links', () => {
     it('should return 429 with retry-after once 10 requests per minute are exceeded', async () => {
-      const responses = await createLinksUpToLimit();
+      const responses = await createLinksUpToLimit(bearerToken);
       const blockedResponse = await createLink();
 
       responses.forEach((response) => {
@@ -65,10 +70,10 @@ describe('Throttling (e2e)', () => {
     });
 
     it('should apply rate limiting before authentication', async () => {
-      const wrongKey = 'wrong-key';
+      const invalidToken = 'invalid-token';
 
-      const responses = await createLinksUpToLimit(wrongKey);
-      const blockedResponse = await createLink(wrongKey);
+      const responses = await createLinksUpToLimit(invalidToken);
+      const blockedResponse = await createLink(invalidToken);
 
       responses.forEach((response) => {
         expect(response.statusCode).toBe(HttpStatus.UNAUTHORIZED);
@@ -80,10 +85,10 @@ describe('Throttling (e2e)', () => {
 
   describe('GET /api/links', () => {
     it('should track limits per route and keep GET available when POST is limited', async () => {
-      await createLinksUpToLimit();
+      await createLinksUpToLimit(bearerToken);
       const blockedResponse = await createLink();
 
-      const response = await listLinks();
+      const response = await listLinks(bearerToken);
 
       expect(blockedResponse.statusCode).toBe(HttpStatus.TOO_MANY_REQUESTS);
       expect(response.statusCode).toBe(HttpStatus.OK);
