@@ -8,7 +8,7 @@ export const setupSwagger = (app: INestApplication) => {
       'URL shortener with custom aliases, expiration and click tracking',
     )
     .setVersion('1.0')
-    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
+    .addBearerAuth()
     .build();
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);

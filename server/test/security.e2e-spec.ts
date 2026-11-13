@@ -51,17 +51,17 @@ describe('Security (e2e)', () => {
     expect(response.headers).not.toHaveProperty('access-control-allow-origin');
   });
 
-  it('should allow the x-api-key header in a CORS preflight request', async () => {
+  it('should allow the Authorization header in a CORS preflight request', async () => {
     const response = await request(app.getHttpServer())
       .options('/api/links')
       .set('Origin', allowedOrigin)
       .set('Access-Control-Request-Method', 'POST')
-      .set('Access-Control-Request-Headers', 'x-api-key');
+      .set('Access-Control-Request-Headers', 'authorization');
 
     expect(response.statusCode).toBe(HttpStatus.NO_CONTENT);
     expect(response.headers['access-control-allow-origin']).toBe(allowedOrigin);
     expect(response.headers['access-control-allow-headers']).toContain(
-      'x-api-key',
+      'Authorization',
     );
   });
 });

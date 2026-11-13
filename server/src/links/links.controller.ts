@@ -17,15 +17,15 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiSecurity,
+  ApiBearerAuth,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 @ApiTags('Links')
-@ApiSecurity('api-key')
-@ApiUnauthorizedResponse({ description: 'Invalid API key' })
+@ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
 @ApiTooManyRequestsResponse({ description: 'Rate limit exceeded' })
 @Controller('links')
 @SerializeOptions({ type: LinkResponseDto })

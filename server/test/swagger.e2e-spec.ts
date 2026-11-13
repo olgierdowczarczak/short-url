@@ -42,14 +42,17 @@ describe('Swagger (e2e)', () => {
       expect(response.body.paths).toHaveProperty('/api/links/{code}');
       expect(response.body.paths).toHaveProperty('/{code}');
       expect(response.body.components.securitySchemes).toEqual({
-        'api-key': {
-          in: 'header',
-          name: 'x-api-key',
-          type: 'apiKey',
+        bearer: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
         },
       });
       expect(response.body.components.schemas.CreateLinkDto.required).toEqual([
         'url',
+      ]);
+      expect(response.body.paths['/api/links'].get.security).toEqual([
+        { bearer: [] },
       ]);
     });
   });

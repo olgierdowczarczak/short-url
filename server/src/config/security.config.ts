@@ -12,6 +12,6 @@ export const setupSecurity = (app: INestApplication) => {
   app.use(helmet());
   app.enableCors({
     origin,
-    allowedHeaders: ['Content-Type', 'x-api-key'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 };
